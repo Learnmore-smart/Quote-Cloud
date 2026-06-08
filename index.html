@@ -1,0 +1,1077 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Quote Cloud · AI 排版海报生成器</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700;900&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+<style>
+/* ============== Design Tokens ============== */
+:root {
+  --bg-0:        #0a0a0c;
+  --bg-1:        #111114;
+  --bg-2:        #16161a;
+  --ink-100:     #f5f1e8;
+  --ink-80:      rgba(245,241,232,0.82);
+  --ink-60:      rgba(245,241,232,0.62);
+  --ink-40:      rgba(245,241,232,0.38);
+  --ink-20:      rgba(245,241,232,0.18);
+  --accent:      #c8a55a;
+  --accent-soft: #8a7444;
+  --w3-color:    #f7e7c4;
+  --w2-color:    #d9c6a0;
+  --w1-color:    #9c9385;
+  --paper-bg:    #f3ece0;
+  --paper-ink:   #1a1610;
+  --paper-soft:  #2a2418;
+  --author-ink:  #4a3f28;
+  --panel-bg:    rgba(20,20,24,0.78);
+  --panel-bd:    rgba(255,255,255,0.10);
+  --shadow-lg:   0 30px 80px -20px rgba(0,0,0,0.7),
+                 0 10px 30px -10px rgba(0,0,0,0.5);
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: radial-gradient(1200px 800px at 30% 20%, #1a1820 0%, #0a0a0c 60%, #050507 100%);
+  color: var(--ink-100);
+  font-family: 'Noto Serif SC', 'Cormorant Garamond', 'Inter', Georgia, serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+
+/* ============== App Shell ============== */
+.app {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 96px 32px 48px;
+}
+
+/* ============== Paper Canvas ============== */
+.paper-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.paper-canvas {
+  position: relative;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,0.05) 0%, transparent 60%),
+    linear-gradient(180deg, #f8f2e6 0%, #efe6d2 100%);
+  color: var(--paper-ink);
+  box-shadow: var(--shadow-lg);
+  border-radius: 2px;
+  overflow: hidden;
+  /* size is set via inline style: width/height + aspect-ratio */
+  /* center-aligned within stage */
+  flex: 0 0 auto;
+  max-width: calc(100% - 0px);
+  max-height: 100%;
+}
+.paper-canvas::before {
+  content: "";
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(rgba(0,0,0,0.025) 1px, transparent 1px),
+    radial-gradient(rgba(0,0,0,0.018) 1px, transparent 1px);
+  background-size: 3px 3px, 7px 7px;
+  background-position: 0 0, 1px 2px;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+.paper-content {
+  position: absolute;
+  left: 0; top: 0;
+  transform-origin: 0 0; /* we will translate the group so content bbox sits at 0,0 */
+  will-change: transform;
+}
+
+/* ============== Quote Items ============== */
+.quote {
+  position: absolute;
+  white-space: pre-wrap;       /* we wrap ourselves by inserting \n */
+  line-height: 1.18;
+  letter-spacing: 0.01em;
+  cursor: default;
+  transition:
+    opacity 0.35s ease,
+    filter 0.45s ease,
+    transform 0.45s cubic-bezier(.2,.7,.2,1),
+    color 0.3s ease;
+  transform-origin: center center;
+  user-select: none;
+}
+.quote .text { display: block; }
+.quote .author {
+  display: block;
+  margin-top: 0.4em;
+  font-style: italic;
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity 0.25s ease, transform 0.3s ease;
+  letter-spacing: 0.04em;
+  font-family: 'Cormorant Garamond', 'Noto Serif SC', serif;
+  font-size: 0.55em;
+  color: var(--author-ink);
+}
+.quote.show-author .author,
+.quote:hover .author {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* weight-driven type */
+.quote.w3 {
+  font-weight: 700;
+  color: var(--paper-ink);
+}
+.quote.w2 {
+  font-weight: 500;
+  color: var(--paper-soft);
+}
+.quote.w1 {
+  font-weight: 400;
+  color: #5a5040;
+  font-style: italic;
+}
+
+/* hover focus state */
+.quote.focused {
+  transform: scale(1.06);
+  filter: none;
+  z-index: 10;
+}
+.quote.dimmed {
+  opacity: 0.18;
+  filter: blur(2.4px);
+}
+
+/* ============== Control Panel ============== */
+.controls {
+  position: fixed;
+  top: 22px; right: 22px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 14px 12px;
+  width: 232px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-bd);
+  border-radius: 10px;
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 18px 50px -20px rgba(0,0,0,0.7);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+.controls h1 {
+  font-family: 'Cormorant Garamond', 'Noto Serif SC', serif;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 4px;
+  letter-spacing: 0.06em;
+  color: var(--ink-100);
+  text-transform: uppercase;
+}
+.controls h1 small {
+  display: block;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  color: var(--ink-40);
+  margin-top: 2px;
+}
+.control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--ink-60);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.control-row label { flex: 0 0 auto; }
+.control-row select, .control-row button {
+  background: rgba(255,255,255,0.04);
+  color: var(--ink-100);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.control-row select:hover, .control-row button:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.18);
+}
+.control-row select:focus, .control-row button:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.orient-toggle {
+  display: inline-flex;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.orient-toggle button {
+  border: none;
+  border-radius: 0;
+  padding: 6px 10px;
+  background: transparent;
+  color: var(--ink-60);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+.orient-toggle button.active {
+  background: rgba(232,200,122,0.18);
+  color: var(--ink-100);
+}
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 36px; height: 20px;
+}
+.switch input { display: none; }
+.switch .slider {
+  position: absolute; inset: 0;
+  background: rgba(255,255,255,0.10);
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+.switch .slider::before {
+  content: "";
+  position: absolute;
+  width: 14px; height: 14px;
+  left: 3px; top: 3px;
+  background: var(--ink-100);
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+}
+.switch input:checked + .slider {
+  background: rgba(232,200,122,0.55);
+}
+.switch input:checked + .slider::before {
+  transform: translateX(16px);
+}
+.print-btn {
+  margin-top: 6px;
+  width: 100%;
+  background: var(--accent) !important;
+  color: #1a1610 !important;
+  font-weight: 600 !important;
+  border: none !important;
+  padding: 9px 0 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase;
+}
+.print-btn:hover { background: #f0d28a !important; }
+
+/* ============== Loading ============== */
+.loader {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #f8f2e6 0%, #efe6d2 100%);
+  color: var(--paper-soft);
+  font-family: 'Cormorant Garamond', serif;
+  z-index: 100;
+  transition: opacity 0.6s ease, visibility 0.6s ease;
+}
+.loader.hidden { opacity: 0; visibility: hidden; }
+.loader .pulse {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  border: 1px solid rgba(26,22,16,0.18);
+  position: relative;
+  margin-bottom: 24px;
+}
+.loader .pulse::before, .loader .pulse::after {
+  content: "";
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(26,22,16,0.35);
+  animation: pulse 2.2s ease-out infinite;
+}
+.loader .pulse::after { animation-delay: 1.1s; }
+@keyframes pulse {
+  0%   { transform: scale(0.4); opacity: 0.9; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+.loader .label {
+  font-size: 18px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--paper-soft);
+  opacity: 0.75;
+}
+.loader .sub {
+  margin-top: 6px;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--paper-soft);
+  opacity: 0.4;
+  font-family: 'Inter', sans-serif;
+}
+
+/* ============== Signature ============== */
+.signature {
+  position: fixed;
+  left: 22px; bottom: 18px;
+  z-index: 50;
+  color: var(--ink-40);
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  user-select: none;
+}
+.signature span { color: var(--accent); }
+
+/* ============== Print Styles ============== */
+@media print {
+  html, body {
+    background: #ffffff !important;
+    overflow: visible !important;
+  }
+  .controls, .loader, .signature { display: none !important; }
+  .app { padding: 0 !important; }
+  .paper-stage {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    display: block !important;
+  }
+  .paper-canvas {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    aspect-ratio: var(--paper-ratio, 1/1.414) !important;
+    page-break-inside: avoid;
+  }
+  .paper-canvas::before { display: none !important; }
+  .paper-content { transform: var(--print-transform, none) !important; }
+  .quote {
+    color: #000000 !important;
+    text-shadow: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .quote.w1, .quote.w2, .quote.w3 { color: #000 !important; }
+  .quote .author {
+    color: #1a1a1a !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .quote.dimmed, .quote.focused {
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="paper-stage">
+    <div class="paper-canvas" id="paperCanvas">
+      <div class="paper-content" id="paperContent"></div>
+      <div class="loader" id="loader">
+        <div class="pulse"></div>
+        <div class="label">Composing</div>
+        <div class="sub">Quote Cloud · AI Layout</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<aside class="controls" id="controls">
+  <h1>Quote Cloud<small>AI Layout Studio</small></h1>
+
+  <div class="control-row">
+    <label for="paper">Paper</label>
+    <select id="paper">
+      <option value="A4" selected>A4 · 210×297</option>
+      <option value="A3">A3 · 297×420</option>
+      <option value="Letter">Letter · 8.5×11</option>
+      <option value="16:9">16:9 Screen</option>
+    </select>
+  </div>
+
+  <div class="control-row">
+    <label>Orientation</label>
+    <div class="orient-toggle" id="orientToggle">
+      <button data-val="portrait" class="active">Portrait</button>
+      <button data-val="landscape">Landscape</button>
+    </div>
+  </div>
+
+  <div class="control-row">
+    <label for="authorToggle">Show Author</label>
+    <span class="switch">
+      <input type="checkbox" id="authorToggle" />
+      <span class="slider"></span>
+    </span>
+  </div>
+
+  <button class="print-btn" id="printBtn">Print Poster</button>
+</aside>
+
+<div class="signature">Quote Cloud · <span>AI</span> Layout Engine</div>
+
+<script>
+/* =============================================================
+ * 1. Config & Seed Data
+ * ============================================================= */
+const OPENROUTER_API_KEY = '';   // <-- set your key here
+
+const SEED_QUOTES = [
+  { author: "立正课代表", text: "17岁能做到这些，不管结果如何，你已经比绝大多数人强了。不是因为你做的东西多牛，而是因为你真的动手了，而且失败了还在继续。这个品质比任何技术栈都值钱。" },
+  { author: "立正课代表", text: "你花了9个月做产品，3个月做宣传片，但你花了多少时间\"卖\"？" },
+  { author: "立正课代表", text: "年轻 builder 最大的风险不是失败，而是一直在‘做’，却从来没真正‘卖’。" },
+  { author: "立正课代表", text: "努力不等于结果，规划也不自动等于赢。" },
+  { author: "立正课代表", text: "少做让你感觉自己在创业的事情，多做真正让产品接近用户的事情。" },
+  { author: "立正课代表", text: "很多产品死掉，不是因为技术没做出来，而是因为没人在乎。" },
+  { author: "立正课代表", text: "不要只是更努力。要更贴近用户，更贴近分发，更贴近结果。" },
+  { author: "atmoszh",   text: "谢谢分享，前途无量，也给了我很大启发和鼓励！“卖”的部分也会改你带来用户反馈，持续不断的高强度反馈应该也是你需要的。" },
+  { author: "脆花",       text: "一个人创业特别寂寞，我在你的贴子里看到了你的坚持，这是大多数人缺少和大多数人失败的原因。" },
+  { author: "脆花",       text: "一个人其实永远想不起来别人说什么搞砸了，别人眼里你的讲话，很快就会忘掉。" },
+  { author: "June",       text: "17岁值得鼓励了，有一个很完整的产品规划设计，有这种思维很可贵了。" },
+  { author: "Er Shen",    text: "你的产品整个设计到规划如此完整专业，包括视频，完全看不出是一个17岁的人做的，看上去像一个团队！未来不可限量。" },
+  { author: "Thomas Yuen",text: "现在每一个小点，十年过后，再回头看已连成一条线。加油！" },
+  { author: "八娥夨",     text: "自律很难的，希望你能坚持下去。" },
+  { author: "Kino",       text: "这个产品视频是你一个人做的吗，做的真好！" }
+];
+
+/* =============================================================
+ * 2. Paper sizes (mm, ISO)
+ * ============================================================= */
+const PAPER_SIZES = {
+  A4:     { w: 210,  h: 297  },
+  A3:     { w: 297,  h: 420  },
+  Letter: { w: 215.9,h: 279.4},
+  "16:9": { w: 297,  h: 167.25 }
+};
+// CSS @page size strings
+const PAPER_PAGE = {
+  A4:     'A4',
+  A3:     'A3',
+  Letter: 'letter',
+  "16:9": '297mm 167.25mm'
+};
+
+/* =============================================================
+ * 3. Canvas Multiline Measurement
+ *    Strict requirement: NEVER use offsetWidth/offsetHeight.
+ *    Use a single hidden offscreen <canvas> for ALL measurements.
+ * ============================================================= */
+const _measureCanvas = document.createElement('canvas');
+_measureCanvas.width = 2048; _measureCanvas.height = 2048;
+const _mctx = _measureCanvas.getContext('2d', { willReadFrequently: false });
+
+const FONT_STACK = '"Noto Serif SC", "Cormorant Garamond", "Inter", Georgia, serif';
+
+function setMeasureFont(fontSize, fontWeight) {
+  _mctx.font = `${fontWeight} ${fontSize}px ${FONT_STACK}`;
+}
+
+/**
+ * Word-wrap a string into lines that fit within maxWidth, measured with
+ * context.measureText(). Supports CJK (per-character fallback) and Latin
+ * (whitespace tokenization). Returns {lines, width, height}.
+ */
+function measureMultilineText(text, fontSize, fontWeight, maxWidth) {
+  setMeasureFont(fontSize, fontWeight);
+  const lineHeight = Math.round(fontSize * 1.18);
+
+  // Normalize whitespace; keep CJK punctuation attached.
+  const clean = String(text).replace(/\r/g, '').trim();
+  // Tokenize: try to split on whitespace; for runs of CJK characters
+  // (no spaces) we'll further split per-character if a single token
+  // is too wide.
+  const tokens = clean.split(/(\s+)/).filter(t => t.length > 0);
+  const lines = [];
+  let current = '';
+
+  const measureLine = (s) => _mctx.measureText(s).width;
+
+  for (let i = 0; i < tokens.length; i++) {
+    const tok = tokens[i];
+    if (/^\s+$/.test(tok)) { current += tok; continue; }
+
+    // Try to add this token to current line
+    const tentative = current + tok;
+    if (measureLine(tentative) <= maxWidth) {
+      current = tentative;
+    } else {
+      // Commit current line if non-empty
+      if (current.trim().length > 0) {
+        lines.push(current.replace(/\s+$/, ''));
+        current = '';
+      }
+      // Token itself might be too long (long CJK w/o spaces)
+      if (measureLine(tok) <= maxWidth) {
+        current = tok;
+      } else {
+        // Split the token char-by-char until it fits
+        let buf = '';
+        for (const ch of tok) {
+          const t2 = buf + ch;
+          if (measureLine(t2) <= maxWidth) {
+            buf = t2;
+          } else {
+            if (buf) lines.push(buf);
+            buf = ch;
+          }
+        }
+        current = buf;
+      }
+    }
+  }
+  if (current.length > 0) lines.push(current.replace(/\s+$/, ''));
+
+  // Compute final width = longest line; height = lines * lineHeight
+  let maxLineWidth = 0;
+  for (const ln of lines) {
+    const w = measureLine(ln);
+    if (w > maxLineWidth) maxLineWidth = w;
+  }
+  const height = lines.length * lineHeight;
+  return { lines, width: maxLineWidth, height, fontSize, lineHeight };
+}
+
+/* =============================================================
+ * 4. AI Weight Fetch (OpenRouter) + local heuristic fallback
+ * ============================================================= */
+const SYSTEM_PROMPT = "你是一个文本分析专家。请分析以下 JSON 数组中的每一句 quote。根据其‘内容的深刻度、警醒程度和核心价值’，为每个对象新增一个 weight 字段。值为 3（最犀利、直击灵魂的金句）、2（有价值的洞察/建议）或 1（普通的鼓励）。请只返回合法的 JSON 数组，不要包含任何 markdown 标记或其他多余文本。";
+
+function localHeuristicWeights(quotes) {
+  // A simple, deterministic scoring fallback so the page always renders.
+  // We aim for a balanced distribution (roughly 30% w3, 40% w2, 30% w1)
+  // by ranking raw scores and binning them.
+  const scored = quotes.map(q => {
+    const t = q.text;
+    let s = 0;
+    // Length-based: longer quotes tend to carry more insight
+    if (t.length > 40)  s += 1;
+    if (t.length > 80)  s += 1;
+    if (t.length > 130) s += 1;
+    // Punctuation intensity: ?！. signals "sharp" or "declarative"
+    const qmarks = (t.match(/[!?？！]/g) || []).length;
+    if (qmarks >= 1) s += 1;
+    if (qmarks >= 2) s += 1;
+    // Rhetorical dashes
+    if (/[——…]/.test(t)) s += 1;
+    // "Sharp" keywords: insight / risk / action / truth
+    if (/(做|卖|死|输|赢|风险|坚持|在乎|结果|核心|价值|灵魂|规划|努力)/.test(t)) s += 1;
+    // Author reputation (lightweight prior)
+    if (q.author === '立正课代表') s += 1;
+    if (q.author === 'Er Shen' || q.author === 'Thomas Yuen') s += 1;
+    return { q, s };
+  });
+  // Sort by score desc and bin into 1/2/3
+  const order = scored.slice().sort((a, b) => b.s - a.s);
+  const n = order.length;
+  // Top ~30% -> 3, next ~40% -> 2, rest -> 1
+  const w3Cut = Math.max(2, Math.round(n * 0.30));
+  const w2Cut = Math.max(w3Cut + 1, Math.round(n * 0.70));
+  const weightByIndex = new Map();
+  order.forEach((row, i) => {
+    let w;
+    if (i < w3Cut) w = 3;
+    else if (i < w2Cut) w = 2;
+    else w = 1;
+    weightByIndex.set(row.q, w);
+  });
+  return scored.map(({ q }) => Object.assign({}, q, { weight: weightByIndex.get(q) }));
+}
+
+function extractJsonArray(s) {
+  if (!s) return null;
+  let str = String(s).trim();
+  // strip ```json ... ``` fences
+  str = str.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
+  // Find first [ and last ]
+  const first = str.indexOf('[');
+  const last  = str.lastIndexOf(']');
+  if (first === -1 || last === -1 || last <= first) return null;
+  const candidate = str.slice(first, last + 1);
+  try { return JSON.parse(candidate); } catch(e) { return null; }
+}
+
+async function fetchWeights(quotes) {
+  if (!OPENROUTER_API_KEY) {
+    return { data: localHeuristicWeights(quotes), source: 'local' };
+  }
+  const userPayload = JSON.stringify(quotes.map(({author, text}) => ({author, text})));
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + OPENROUTER_API_KEY,
+        'HTTP-Referer': location.origin || 'http://localhost',
+        'X-Title': 'Quote Cloud Poster Generator'
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-flash-1.5',
+        temperature: 0.4,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user',   content: userPayload }
+        ]
+      })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    const text = json?.choices?.[0]?.message?.content ?? '';
+    const arr = extractJsonArray(text);
+    if (!Array.isArray(arr) || arr.length !== quotes.length) {
+      throw new Error('Bad payload shape');
+    }
+    // Merge weight back
+    const merged = quotes.map((q, i) => {
+      const w = Number(arr[i]?.weight);
+      const weight = (w === 1 || w === 2 || w === 3) ? w : 2;
+      return Object.assign({}, q, { weight });
+    });
+    return { data: merged, source: 'ai' };
+  } catch (err) {
+    console.warn('[QuoteCloud] AI weight fetch failed, using local heuristic:', err);
+    return { data: localHeuristicWeights(quotes), source: 'local' };
+  }
+}
+
+/* =============================================================
+ * 5. Type scale & layout parameters per weight
+ * ============================================================= */
+function paramsForWeight(weight) {
+  // Returns per-weight type/layout params
+  switch (weight) {
+    case 3: return { fontSize: 64, lineHeight: 64*1.18, maxWidth: 760, color: 'var(--w3-color)', className: 'w3' };
+    case 2: return { fontSize: 40, lineHeight: 40*1.18, maxWidth: 560, color: 'var(--w2-color)', className: 'w2' };
+    default:return { fontSize: 24, lineHeight: 24*1.18, maxWidth: 360, color: 'var(--w1-color)', className: 'w1' };
+  }
+}
+
+/* =============================================================
+ * 6. Archimedean spiral layout + AABB collision detection
+ * ============================================================= */
+function spiralLayout(quotes, canvasW, canvasH) {
+  // Sort by weight desc
+  const sorted = quotes.slice().sort((a, b) => b.weight - a.weight);
+
+  const placed = [];   // {x, y, w, h, params, quote}
+  const PADDING = 6;   // visual breathing room between boxes
+
+  const cx = canvasW / 2;
+  const cy = canvasH / 2;
+
+  // For each quote, measure box, then walk the spiral until a non-overlapping
+  // position is found.
+  for (let qi = 0; qi < sorted.length; qi++) {
+    const q = sorted[qi];
+    const p = paramsForWeight(q.weight);
+    const m = measureMultilineText(q.text, p.fontSize, 700, p.maxWidth);
+    const w = m.width;
+    const h = m.height;
+    const lines = m.lines;
+
+    let found = null;
+
+    if (placed.length === 0) {
+      // Largest/most important sits at center.
+      found = { x: cx - w/2, y: cy - h/2 };
+    } else {
+      // Archimedean spiral: r = a + b*theta. Step in theta, sweep a few
+      // quadrants per radius. We try a fine step first, then a coarser
+      // one if it takes too long.
+      const maxR = Math.hypot(canvasW, canvasH);
+      const stepA = 0.18;   // primary step (radians)
+      const stepB = 0.55;   // fallback step
+      let theta = 0.05;
+      let tries = 0;
+      const MAX_TRIES = 14000;
+
+      // spiral outwards
+      while (tries < MAX_TRIES) {
+        const r = 6 + 3.4 * theta;     // b = 3.4 (px per radian)
+        if (r > maxR) break;
+        const x = cx + r * Math.cos(theta) - w/2;
+        const y = cy + r * Math.sin(theta) - h/2;
+
+        if (x > 0 && y > 0 && x + w < canvasW && y + h < canvasH) {
+          if (!collides(placed, x, y, w, h, PADDING)) {
+            found = { x, y };
+            break;
+          }
+        }
+        theta += (tries < 1500) ? stepA : stepB;
+        tries++;
+      }
+
+      // Last-resort: random jittered positions near content centroid.
+      if (!found) {
+        for (let k = 0; k < 4000; k++) {
+          const rx = Math.random() * (canvasW - w);
+          const ry = Math.random() * (canvasH - h);
+          if (!collides(placed, rx, ry, w, h, PADDING)) {
+            found = { x: rx, y: ry };
+            break;
+          }
+        }
+      }
+
+      // Hard fallback: clip to corner.
+      if (!found) {
+        found = { x: 4, y: 4 };
+      }
+    }
+
+    placed.push({ x: found.x, y: found.y, w, h, lines, params: p, quote: q });
+  }
+
+  return placed;
+}
+
+function collides(placed, x, y, w, h, pad) {
+  for (let i = 0; i < placed.length; i++) {
+    const r = placed[i];
+    const ax = x - pad, ay = y - pad, ax2 = x + w + pad, ay2 = y + h + pad;
+    const bx = r.x - pad, by = r.y - pad, bx2 = r.x + r.w + pad, by2 = r.y + r.h + pad;
+    if (ax < bx2 && ax2 > bx && ay < by2 && ay2 > by) return true;
+  }
+  return false;
+}
+
+/* =============================================================
+ * 7. Paper canvas sizing
+ *    We compute at a fixed base height per paper so the algorithm
+ *    has consistent pixel coordinates. Then CSS scales everything
+ *    to fit the visible paper rectangle.
+ * ============================================================= */
+const BASE_HEIGHT = 1600;   // base height in "design pixels" for layout
+function paperDesignSize(paperKey, orientation) {
+  const p = PAPER_SIZES[paperKey];
+  const portraitH = BASE_HEIGHT;
+  const portraitW = Math.round(portraitH * (p.w / p.h));
+  if (orientation === 'landscape') {
+    return { w: portraitH, h: portraitW };
+  }
+  return { w: portraitW, h: portraitH };
+}
+
+/* =============================================================
+ * 8. Render
+ * ============================================================= */
+const $paper      = document.getElementById('paperCanvas');
+const $content    = document.getElementById('paperContent');
+const $loader     = document.getElementById('loader');
+const $controls   = document.getElementById('controls');
+const $paperSel   = document.getElementById('paper');
+const $orient     = document.getElementById('orientToggle');
+const $authorTg   = document.getElementById('authorToggle');
+const $printBtn   = document.getElementById('printBtn');
+
+const STATE = {
+  paper: 'A4',
+  orientation: 'portrait',
+  showAuthor: false,
+  placed: [],
+  designSize: { w: 0, h: 0 }
+};
+
+function applyPaperSizing() {
+  const { w, h } = STATE.designSize;
+  // The visible paper canvas is sized by aspect-ratio + max-height/max-width
+  // We set aspect-ratio in CSS via inline style.
+  $paper.style.aspectRatio = `${w} / ${h}`;
+  // We also explicitly set the visible size to fit within the stage.
+  fitPaperToStage();
+}
+
+function fitPaperToStage() {
+  // Choose the largest rectangle of the paper's aspect ratio that fits
+  // within .paper-stage's available area.
+  const stage = document.querySelector('.paper-stage');
+  const rect = stage.getBoundingClientRect();
+  const margin = 24;
+  const availW = Math.max(200, rect.width  - margin*2);
+  const availH = Math.max(200, rect.height - margin*2);
+  const targetRatio = STATE.designSize.w / STATE.designSize.h;
+
+  let cssW, cssH;
+  if (availW / availH > targetRatio) {
+    cssH = availH;
+    cssW = cssH * targetRatio;
+  } else {
+    cssW = availW;
+    cssH = cssW / targetRatio;
+  }
+  $paper.style.width  = cssW + 'px';
+  $paper.style.height = cssH + 'px';
+}
+
+function computeContentTransform() {
+  // Items are placed in absolute "design" coordinates that match the
+  // paper canvas's design pixel size (e.g. 1131x1600 for A4 portrait).
+  // The wrapper is sized to the design canvas; we then:
+  //   1. translate so the items' bounding box is centered in the design canvas
+  //   2. scale so the design canvas maps to the paper's visible CSS size
+  if (STATE.placed.length === 0) return;
+
+  const designW = STATE.designSize.w;
+  const designH = STATE.designSize.h;
+
+  // 1. Content bbox
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const p of STATE.placed) {
+    if (p.x < minX) minX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.x + p.w > maxX) maxX = p.x + p.w;
+    if (p.y + p.h > maxY) maxY = p.y + p.h;
+  }
+  const contentW = maxX - minX;
+  const contentH = maxY - minY;
+
+  // 2. Wrapper = design canvas size
+  $content.style.width  = designW + 'px';
+  $content.style.height = designH + 'px';
+  $content.style.left   = '0px';
+  $content.style.top    = '0px';
+
+  // 3. Translate to center the bbox within the design canvas
+  const tx = (designW - contentW) / 2 - minX;
+  const ty = (designH - contentH) / 2 - minY;
+
+  // 4. Compute CSS scale to fit visible paper canvas
+  const paperRect = $paper.getBoundingClientRect();
+  const visibleW = paperRect.width  || designW;
+  const visibleH = paperRect.height || designH;
+  const cssScale = Math.min(visibleW / designW, visibleH / designH);
+
+  $content.style.transformOrigin = '0 0';
+  $content.style.transform = `translate(${tx}px, ${ty}px) scale(${cssScale})`;
+
+  // 5. Stash for @media print (paper sized in real mm; content just translates)
+  $paper.style.setProperty('--paper-ratio', `${designW} / ${designH}`);
+  $paper.style.setProperty('--print-transform', `translate(${tx}px, ${ty}px)`);
+}
+
+function renderQuotes() {
+  $content.innerHTML = '';
+  STATE.placed.forEach((p, i) => {
+    const q = p.quote;
+    const el = document.createElement('div');
+    el.className = `quote ${p.params.className}`;
+    if (STATE.showAuthor) el.classList.add('show-author');
+    el.style.left   = p.x + 'px';
+    el.style.top    = p.y + 'px';
+    el.style.width  = p.w + 'px';
+    el.style.height = p.h + 'px';
+    el.style.fontSize = p.params.fontSize + 'px';
+    // color is driven entirely by CSS class (.w1 / .w2 / .w3) so it
+    // can be cleanly overridden by @media print.
+
+    // text content with line breaks inserted
+    const text = document.createElement('span');
+    text.className = 'text';
+    text.textContent = p.lines.join('\n');
+    // Replace newlines with <br> via white-space: pre-wrap (already on .quote)
+    el.appendChild(text);
+
+    if (q.author) {
+      const a = document.createElement('span');
+      a.className = 'author';
+      a.textContent = '— ' + q.author;
+      el.appendChild(a);
+    }
+
+    el.addEventListener('mouseenter', () => focusQuote(el));
+    el.addEventListener('mouseleave', () => clearFocus());
+    $content.appendChild(el);
+  });
+  // Apply transform AFTER DOM has measured the natural sizes; for safety
+  // we apply it immediately and once more on next frame.
+  computeContentTransform();
+  requestAnimationFrame(computeContentTransform);
+}
+
+function focusQuote(target) {
+  document.querySelectorAll('.quote').forEach(el => {
+    if (el === target) {
+      el.classList.add('focused');
+      el.classList.remove('dimmed');
+    } else {
+      el.classList.add('dimmed');
+      el.classList.remove('focused');
+    }
+  });
+}
+function clearFocus() {
+  document.querySelectorAll('.quote').forEach(el => {
+    el.classList.remove('focused', 'dimmed');
+  });
+}
+
+/* =============================================================
+ * 9. Main pipeline
+ * ============================================================= */
+async function compose() {
+  $loader.classList.remove('hidden');
+  // Slight delay so the loading state is visible
+  await new Promise(r => setTimeout(r, 350));
+
+  const { data } = await fetchWeights(SEED_QUOTES);
+  // Ensure each quote has a weight
+  data.forEach(q => { if (![1,2,3].includes(q.weight)) q.weight = 2; });
+
+  STATE.designSize = paperDesignSize(STATE.paper, STATE.orientation);
+  applyPaperSizing();
+  STATE.placed = spiralLayout(data, STATE.designSize.w, STATE.designSize.h);
+  renderQuotes();
+
+  $loader.classList.add('hidden');
+}
+
+/* =============================================================
+ * 10. Event wiring
+ * ============================================================= */
+$paperSel.addEventListener('change', e => {
+  STATE.paper = e.target.value;
+  STATE.designSize = paperDesignSize(STATE.paper, STATE.orientation);
+  applyPaperSizing();
+  STATE.placed = spiralLayout(
+    STATE.placed.map(p => p.quote),
+    STATE.designSize.w, STATE.designSize.h
+  );
+  renderQuotes();
+  injectPrintRule();
+});
+
+$orient.addEventListener('click', e => {
+  const btn = e.target.closest('button[data-val]');
+  if (!btn) return;
+  $orient.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+  STATE.orientation = btn.dataset.val;
+  STATE.designSize = paperDesignSize(STATE.paper, STATE.orientation);
+  applyPaperSizing();
+  STATE.placed = spiralLayout(
+    STATE.placed.map(p => p.quote),
+    STATE.designSize.w, STATE.designSize.h
+  );
+  renderQuotes();
+  injectPrintRule();
+});
+
+$authorTg.addEventListener('change', e => {
+  STATE.showAuthor = e.target.checked;
+  document.querySelectorAll('.quote').forEach(el => {
+    el.classList.toggle('show-author', STATE.showAuthor);
+  });
+});
+
+$printBtn.addEventListener('click', () => {
+  injectPrintRule();
+  // Compute print scale synchronously, then snapshot. The beforeprint
+  // event will also fire, but we want to be defensive across browsers.
+  applyPrintScale();
+  // Give the browser a tick to apply the @page style and the new transform.
+  setTimeout(() => {
+    applyPrintScale(); // re-apply in case anything reset it
+    window.print();
+  }, 80);
+});
+
+function injectPrintRule() {
+  // Remove existing
+  document.querySelectorAll('style[data-dynamic="print"]').forEach(s => s.remove());
+  const size = PAPER_PAGE[STATE.paper] || 'A4';
+  const orient = STATE.orientation; // 'portrait' | 'landscape'
+  const css = `@media print { @page { size: ${size} ${orient}; margin: 0; } }`;
+  const s = document.createElement('style');
+  s.setAttribute('data-dynamic', 'print');
+  s.textContent = css;
+  document.head.appendChild(s);
+}
+
+// Apply a print-friendly transform right before the browser snapshots the
+// page. In print, the paper is rendered at its true physical size in CSS
+// pixels (e.g. 210mm A4 -> ~794px at 96dpi). Our wrapper is sized in
+// "design" pixels (e.g. 1131x1600) so we must scale it down to fit.
+function applyPrintScale() {
+  if (STATE.placed.length === 0) return;
+  const paperMm = PAPER_SIZES[STATE.paper];
+  const paperWmm = STATE.orientation === 'landscape' ? paperMm.h : paperMm.w;
+  const paperHmm = STATE.orientation === 'landscape' ? paperMm.w : paperMm.h;
+  // 1 CSS px ≈ 25.4/96 mm  =>  1mm ≈ 96/25.4 px
+  const PX_PER_MM = 96 / 25.4;
+  const cssPaperW = paperWmm * PX_PER_MM;
+  const cssPaperH = paperHmm * PX_PER_MM;
+  const designW = STATE.designSize.w;
+  const designH = STATE.designSize.h;
+  const scale = Math.min(cssPaperW / designW, cssPaperH / designH);
+
+  // Compute translate (center the bbox) in CSS-px space
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const p of STATE.placed) {
+    minX = Math.min(minX, p.x);
+    minY = Math.min(minY, p.y);
+    maxX = Math.max(maxX, p.x + p.w);
+    maxY = Math.max(maxY, p.y + p.h);
+  }
+  const contentW = maxX - minX;
+  const contentH = maxY - minY;
+  const tx = (designW - contentW) / 2 - minX;
+  const ty = (designH - contentH) / 2 - minY;
+  // In print, the wrapper should be sized to the design canvas size
+  // (in CSS px) and then scaled. The browser handles the paper.
+  $content.style.width  = designW + 'px';
+  $content.style.height = designH + 'px';
+  $content.style.transformOrigin = '0 0';
+  $content.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+}
+
+window.addEventListener('beforeprint', applyPrintScale);
+window.addEventListener('afterprint', () => {
+  // Restore the normal screen transform
+  computeContentTransform();
+});
+
+window.addEventListener('resize', () => {
+  fitPaperToStage();
+});
+
+// Kick off
+injectPrintRule();
+compose();
+</script>
+
+</body>
+</html>

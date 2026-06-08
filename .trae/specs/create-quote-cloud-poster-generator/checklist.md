@@ -1,0 +1,26 @@
+# Checklist
+
+- [x] 单文件 `index.html` 完整可运行（无外部 JS / 框架依赖，仅字体可走 Google Fonts CDN）
+- [x] 顶部预留 `OPENROUTER_API_KEY = ''` 占位
+- [x] 内置 15 条初始 Quote 数组与 prompt 中的内容完全一致
+- [x] 使用离屏 `<canvas>` + `context.measureText()` 测量文本，不使用 `offsetWidth/offsetHeight`
+- [x] `measureMultilineText(text, fontSize, fontWeight, maxWidth)` 函数签名与返回值正确
+- [x] 不同 weight 映射不同 fontSize 与 maxWidth（weight 3 最大 + 较宽）
+- [x] Quote 按 weight 降序排序，weight 3 居中
+- [x] 阿基米德螺旋线 `x = cx + r*cos(θ), y = cy + r*sin(θ)` 步进
+- [x] AABB 碰撞检测：候选与已放置均不重叠（静态验证：8 种 paper×orient 组合均 0 overlap）
+- [x] 所有坐标在内存计算完毕后一次性渲染（`position: absolute; left/top`）
+- [x] 画板容器 `aspect-ratio` 与纸张设置一致（A4 portrait ≈ 1:1.414 等）
+- [x] 内容包围盒计算正确，`transform: scale()` 居中无裁剪
+- [x] 控制面板：纸张下拉 / 方向切换 / 作者开关 / Print 按钮四要素齐备
+- [x] `@media print` 动态注入 `@page { size: <paper> <orientation>; margin: 0; }`
+- [x] 打印预览：白底、纯黑/深灰文字、无 box-shadow / blur、隐藏控制面板
+- [x] Hover 聚焦：被悬停句子放大高亮，其他句子变暗 + 模糊
+- [x] 作者默认隐藏；全局开关或 Hover 单条时淡入显示
+- [x] OpenRouter 请求使用 `google/gemini-flash-1.5` 模型
+- [x] Prompt 文本与规格一致（要求 weight 为 1/2/3）
+- [x] 解析返回 JSON 时过滤 ```json 等 markdown 标记
+- [x] API Key 缺失 / 网络失败时回退到本地启发式评分，页面不崩溃
+- [x] 加载过程中展示 Loading 态
+- [x] 切换纸张 / 方向时画板比例与缩放实时更新
+- [x] 视觉风格：深色系（屏幕态）、高对比（打印态），具备海报感与艺术感
