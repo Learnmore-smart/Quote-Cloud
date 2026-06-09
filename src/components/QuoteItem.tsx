@@ -1,47 +1,41 @@
-import type { PlacedQuote } from '../types';
+import type { CSSProperties } from 'react';
+import type { ScatterItem } from '../scatter';
 
 interface QuoteItemProps {
-  placed: PlacedQuote;
+  item: ScatterItem;
+  /** Flex-grow weight inside its row (1 for solo, 2 or 3 for a pair). */
+  flex: number;
   showAuthor: boolean;
 }
 
-export function QuoteItem({ placed, showAuthor }: QuoteItemProps) {
-  const classNames = [
-    'quote',
-    placed.className,
-    showAuthor ? 'show-author' : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
+/**
+ * A single quote block inside an explicit full-width row. It flex-grows to
+ * fill its share of the row, so the row is always edge-to-edge with no holes.
+ * Its font size is driven by *loudness* (importance) relative to the field
+ * `--base`, so the binary-search Auto-Fit engine can scale the whole poster at
+ * once by changing a single CSS variable.
+ */
+export function QuoteItem({ item, flex, showAuthor }: QuoteItemProps) {
+  const { quote, isHero, align, fontEm, fontWeight, lineHeight } = item;
+
+  const style: CSSProperties = {
+    // Grow to fill the row; never overflow it.
+    flexGrow: flex,
+    flexShrink: 1,
+    flexBasis: 0,
+    minWidth: 0,
+    textAlign: align,
+    fontSize: `calc(var(--base, 18px) * ${fontEm})`,
+    fontWeight,
+    lineHeight,
+  };
 
   return (
-    <div
-      className={classNames}
-      style={{
-        left: '50%',
-        top: '50%',
-        transform: `translate(calc(-50% + ${placed.x}px), calc(-50% + ${placed.y}px))`,
-        width: `${placed.w}px`,
-        height: `${placed.h}px`,
-        fontSize: `${placed.fontSize}px`,
-        lineHeight: `${placed.lineHeight}px`,
-        fontWeight: placed.fontWeight,
-        color: placed.color,
-      }}
-    >
-      <span className="text">{placed.lines.join('\n')}</span>
-      {showAuthor && placed.authorText && (
-        <span
-          className="author"
-          style={{
-            marginTop: `${placed.authorMarginTop ?? 0}px`,
-            fontSize: `${placed.authorFontSize ?? placed.fontSize * 0.55}px`,
-            lineHeight: `${placed.authorLineHeight ?? placed.lineHeight * 0.55}px`,
-          }}
-        >
-          {placed.authorText}
-        </span>
+    <figure className={`quote${isHero ? ' quote-hero' : ''}`} style={style}>
+      <span className="text">{quote.text}</span>
+      {showAuthor && quote.author && (
+        <span className="author-name">— {quote.author}</span>
       )}
-    </div>
+    </figure>
   );
 }

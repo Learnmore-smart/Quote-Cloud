@@ -75,37 +75,64 @@ input {
   color: var(--w3-color);
 }
 
+/* ============================================================
+ * Semantic Emotion Cloud — Explicit Row-Packing.
+ * The field is a vertical flex column that stretches its rows
+ * from the top edge to the bottom edge (`space-between`). Each
+ * row is a full-width horizontal flex line whose cells grow to
+ * fill 100% of the width — so there are NEVER horizontal holes.
+ * The brute-force engine in PaperCanvas binary-searches `--base`
+ * until this cloud fits inside the bounded paper arena.
+ * ============================================================ */
+.scatter-field {
+  width: 100%;
+  height: 100%;
+  padding: 6%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.5em;
+  font-size: var(--base, 18px);
+  text-transform: uppercase;
+}
+
+/* A single full-width row of 1 or 2 quotes. */
+.quote-row {
+  display: flex;
+  width: 100%;
+  align-items: baseline;
+  gap: 1.5em;
+}
+
 .quote {
-  position: absolute;
-  white-space: pre-wrap;
+  margin: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   user-select: none;
   pointer-events: none;
   letter-spacing: 0;
+  color: var(--w2-color);
 }
 
 .quote .text {
   display: block;
 }
 
-.quote .author {
-  display: block;
-  color: var(--author-ink);
-  font-family: "Noto Serif SC", "Source Han Serif SC", Georgia, serif;
-  font-style: italic;
-  letter-spacing: 0;
-}
-
-.quote.w3 {
+.quote-hero {
+  letter-spacing: -0.02em;
   color: var(--w3-color);
 }
 
-.quote.w2 {
-  color: var(--w2-color);
-}
-
-.quote.w1 {
-  color: var(--w1-color);
+.quote .author-name {
+  display: block;
+  margin-top: 0.5em;
+  font-size: 0.4em;
   font-style: italic;
+  font-weight: 400;
+  text-transform: none;
+  color: var(--author-ink);
+  opacity: 0.85;
 }
 
 .controls {
@@ -208,10 +235,9 @@ input {
   }
 
   .quote,
-  .quote.w1,
-  .quote.w2,
-  .quote.w3,
-  .quote .author {
+  .quote-hero,
+  .quote .text,
+  .quote .author-name {
     color: #000000 !important;
   }
 }

@@ -2,6 +2,7 @@ import type { Quote } from './types';
 
 /** Initial dataset of quotes. */
 export const SEED_QUOTES: Quote[] = [
+  { text: "Building LearnX itself, creating a structured plan to build it, the architecture, frontend design. It's way ahead of most people. All in all, if you're useless, then idk what other, less productive people are", author: 'Yu He Wang' },
   { author: '立正课代表', text: '17岁能做到这些，不管结果如何，你已经比绝大多数人强了。不是因为你做的东西多牛，而是因为你真的动手了，而且失败了还在继续。这个品质比任何技术栈都值钱。' },
   { author: '立正课代表', text: '你花了9个月做产品，3个月做宣传片，但你花了多少时间"卖"？' },
   { author: '立正课代表', text: '年轻 builder 最大的风险不是失败，而是一直在‘做’，却从来没真正‘卖’。' },

@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ControlPanel } from './components/ControlPanel';
 import { PaperCanvas } from './components/PaperCanvas';
-import { iterativeFitLayout } from './layout';
+import { assignScatter } from './scatter';
 import { injectPrintRule } from './print';
 import { fetchWeights } from './weights';
 import { SEED_QUOTES } from './seed';
 import { getPaperCanvasSize } from './config';
-import type { PaperKey, Orientation, PlacedQuote, Quote } from './types';
+import type { PaperKey, Orientation, Quote } from './types';
 
 import './styles.css';
 
@@ -39,7 +39,6 @@ export default function App() {
   const [orientation, setOrientation] = useState<Orientation>('portrait');
   const [showAuthor, setShowAuthor] = useState(false);
   const [quotes, setQuotes] = useState<Quote[]>([]);
-  const [placed, setPlaced] = useState<PlacedQuote[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewportSize, setViewportSize] = useState({
     w: typeof window !== 'undefined' ? window.innerWidth : 1280,
@@ -97,17 +96,10 @@ export default function App() {
     };
   }, []);
 
-  // Re-layout when quotes or canvas size change
-  useEffect(() => {
-    if (quotes.length === 0) return;
-    const result = iterativeFitLayout(
-      quotes,
-      canvasSize.w,
-      canvasSize.h,
-      { showAuthor },
-    );
-    setPlaced(result);
-  }, [quotes, canvasSize.w, canvasSize.h, showAuthor]);
+  // Assign semantic cloud styles (loudness, ragged widths / alignments).
+  // The actual font scaling now happens inside PaperCanvas via a measured
+  // binary-search auto-fit pass, so no estimate is needed here.
+  const items = useMemo(() => assignScatter(quotes), [quotes]);
 
   // Inject print rule on paper/orientation change
   useEffect(() => {
@@ -125,7 +117,7 @@ export default function App() {
         <PaperCanvas
           canvasSize={canvasSize}
           previewScale={previewScale}
-          placed={placed}
+          items={items}
           showAuthor={showAuthor}
           loading={loading}
         />
