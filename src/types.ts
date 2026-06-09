@@ -19,13 +19,17 @@ export interface PlacedQuote {
   lineHeight: number;
   fontWeight: number;
   maxWidth: number;
-  lines: string[];       // text per line for rendering
+  lines: string[];
+  authorText?: string;
+  authorFontSize?: number;
+  authorLineHeight?: number;
+  authorMarginTop?: number;
   color: string;
   className: 'w1' | 'w2' | 'w3';
   quote: Quote;
 }
 
-export type PaperKey = 'A4' | 'A3' | 'Letter';
+export type PaperKey = 'A3' | 'A4' | 'A5' | 'Letter' | 'Legal';
 export type Orientation = 'portrait' | 'landscape';
 
 export interface PaperSize {

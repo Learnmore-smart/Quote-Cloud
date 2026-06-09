@@ -5,32 +5,20 @@ import { iterativeFitLayout } from './layout';
 import { injectPrintRule } from './print';
 import { fetchWeights } from './weights';
 import { SEED_QUOTES } from './seed';
-import { PAPER_SIZES } from './config';
+import { getPaperCanvasSize } from './config';
 import type { PaperKey, Orientation, PlacedQuote, Quote } from './types';
 
 import './styles.css';
 
-/** Calculate the actual CSS pixel size of the paper canvas based on viewport */
-function computePaperCssSize(
-  paper: PaperKey,
-  orientation: Orientation,
+function computePreviewScale(
+  canvasW: number,
+  canvasH: number,
   viewportW: number,
   viewportH: number,
-): { w: number; h: number } {
-  const p = PAPER_SIZES[paper];
-  const aspectRatio = orientation === 'landscape' ? p.h / p.w : p.w / p.h;
-  const margin = 24;
-  const availW = Math.max(200, viewportW - 64 - margin * 2);
-  const availH = Math.max(200, viewportH - 144 - margin * 2);
-  let cssW: number, cssH: number;
-  if (availW / availH > aspectRatio) {
-    cssH = availH;
-    cssW = cssH * aspectRatio;
-  } else {
-    cssW = availW;
-    cssH = cssW / aspectRatio;
-  }
-  return { w: Math.round(cssW), h: Math.round(cssH) };
+): number {
+  const availW = Math.max(240, viewportW - 64);
+  const availH = Math.max(240, viewportH - 144);
+  return Math.min(1, availW / canvasW, availH / canvasH);
 }
 
 /**
@@ -67,10 +55,19 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Compute actual CSS pixel size of paper canvas
+  // Use fixed virtual paper pixels for layout; scale only the preview.
   const canvasSize = useMemo(
-    () => computePaperCssSize(paper, orientation, viewportSize.w, viewportSize.h),
-    [paper, orientation, viewportSize.w, viewportSize.h],
+    () => getPaperCanvasSize(paper, orientation),
+    [paper, orientation],
+  );
+  const previewScale = useMemo(
+    () => computePreviewScale(
+      canvasSize.w,
+      canvasSize.h,
+      viewportSize.w,
+      viewportSize.h,
+    ),
+    [canvasSize.h, canvasSize.w, viewportSize.h, viewportSize.w],
   );
 
   // Fetch weights — must wait for fonts to load first so the
@@ -103,9 +100,14 @@ export default function App() {
   // Re-layout when quotes or canvas size change
   useEffect(() => {
     if (quotes.length === 0) return;
-    const result = iterativeFitLayout(quotes, canvasSize.w, canvasSize.h);
+    const result = iterativeFitLayout(
+      quotes,
+      canvasSize.w,
+      canvasSize.h,
+      { showAuthor },
+    );
     setPlaced(result);
-  }, [quotes, canvasSize.w, canvasSize.h]);
+  }, [quotes, canvasSize.w, canvasSize.h, showAuthor]);
 
   // Inject print rule on paper/orientation change
   useEffect(() => {
@@ -122,6 +124,7 @@ export default function App() {
       <div className="app">
         <PaperCanvas
           canvasSize={canvasSize}
+          previewScale={previewScale}
           placed={placed}
           showAuthor={showAuthor}
           loading={loading}

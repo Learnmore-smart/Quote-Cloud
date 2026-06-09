@@ -1,287 +1,325 @@
-import { prepareQuotes, measureQuote, getQuoteLines, maxWidthForWeight, LINE_HEIGHT_RATIO } from './measure';
+import { calculateLayout, type QuoteNode } from './layoutCore';
+import {
+  LINE_HEIGHT_RATIO,
+  maxWidthForWeight,
+  measureAuthorLine,
+  measureQuoteText,
+  prepareQuotes,
+} from './measure';
 import type { PlacedQuote, Quote } from './types';
 
-/* =============================================================
- * Exact layout engine from spec — Archimedean spiral + AABB
- * ============================================================= */
+/* =============================================================================
+ * Responsive, math-driven layout engine
+ * -----------------------------------------------------------------------------
+ * Goal: distribute N quotes across the ENTIRE canvas (any paper / orientation),
+ * scaling type UP when there are few quotes and DOWN when there are many, with
+ * zero overlaps and nothing bleeding past the page borders.
+ *
+ * Pipeline per layout:
+ *   1. Reserve an inner margin so nothing touches the paper edge.
+ *   2. Pick a starting font size from an area-coverage heuristic.
+ *   3. Grow / shrink the font until the collision-packed cluster is the
+ *      largest one that still fits inside the available area (aspect-matched
+ *      spiral so the cluster naturally elongates for landscape vs portrait).
+ *   4. Expand the placed positions outward (independently on X and Y) so the
+ *      content snaps edge-to-edge. Pushing non-overlapping boxes apart can
+ *      never create new overlaps, so this stays collision-free.
+ * ========================================================================== */
 
-interface Rectangle {
-  left: number;
-  right: number;
-  top: number;
-  bottom: number;
+const MARGIN_RATIO = 0.05;        // inner page margin, fraction of short side
+const REFERENCE_FONT = 24;        // font used for the initial area estimate
+const TARGET_COVERAGE = 0.55;     // rough ink coverage target for the estimate
+const MIN_FONT = 7;
+const MAX_FONT = 480;
+const GROW_FACTOR = 1.1;
+const SHRINK_FACTOR = 0.9;
+const MAX_STEPS = 16;
+const MAX_POSITION_EXPAND = 2.2;  // cap how far boxes are pushed apart to fill
+const PADDING_RATIO = 0.5;        // gap between boxes, relative to base font
+
+export interface IterativeFitOptions {
+  showAuthor?: boolean;
+  padding?: number;
 }
 
-/** Internal node passed to the spiral algorithm.
- *  `x` and `y` are CENTER coordinates relative to the spiral origin. */
-interface QuoteNode {
-  text: string;
-  author: string;
-  weight: number;
+interface MeasuredQuote {
+  quote: Quote;
   width: number;
   height: number;
-  x?: number;
-  y?: number;
+  fontSize: number;
+  lineHeight: number;
+  fontWeight: number;
+  maxWidth: number;
+  lines: string[];
+  authorText?: string;
+  authorFontSize?: number;
+  authorLineHeight?: number;
+  authorMarginTop?: number;
 }
 
-const COLLISION_PADDING = 12;
-const MAX_ITERATIONS = 10;
-const FILL_THRESHOLD = 0.80;
-const SHRINK_FACTOR = 0.9;
-const GROW_FACTOR = 1.1;
-const MAX_R = 5000;
-const THETA_STEP = 0.05;
-const SPIRAL_FACTOR = 1.2;
-
-/* 1. Exact AABB Overlap Check (from spec) */
-function intersect(r1: Rectangle, r2: Rectangle): boolean {
-  return !(r2.left > r1.right ||
-           r2.right < r1.left ||
-           r2.top > r1.bottom ||
-           r2.bottom < r1.top);
+interface FitResult {
+  placed: PlacedQuote[];
+  bounds: Bounds;
+  fits: boolean;
 }
 
-/* 2. Archimedean Spiral Placement Loop (from spec — use this exact code) */
-function calculateLayout(quotes: QuoteNode[], padding: number = COLLISION_PADDING): QuoteNode[] {
-  const placed: { box: Rectangle; node: QuoteNode }[] = [];
-
-  // Sort by weight descending so largest quotes occupy the center first
-  const sorted = [...quotes].sort((a, b) => b.weight - a.weight);
-
-  for (const node of sorted) {
-    let theta = 0;
-    let r = 0;
-    let found = false;
-    const step = THETA_STEP;          // tiny theta step for high-precision placement
-    const spiralFactor = SPIRAL_FACTOR; // distance between spiral arms
-
-    // Try to place the node along the spiral
-    while (!found && r < MAX_R) {
-      const x = Math.cos(theta) * r;
-      const y = Math.sin(theta) * r;
-
-      // Define the bounding box for the current position, centered on (x,y)
-      const currentBox: Rectangle = {
-        left: x - node.width / 2 - padding,
-        right: x + node.width / 2 + padding,
-        top: y - node.height / 2 - padding,
-        bottom: y + node.height / 2 + padding,
-      };
-
-      // Check collision against all already placed nodes
-      let collision = false;
-      for (const p of placed) {
-        if (intersect(currentBox, p.box)) {
-          collision = true;
-          break;
-        }
-      }
-
-      if (!collision) {
-        node.x = x;
-        node.y = y;
-        placed.push({ box: currentBox, node });
-        found = true;
-      }
-
-      theta += step;
-      r = spiralFactor * theta;
-    }
-
-    // Defensive fallback: if no spot was found, anchor the node at the
-    // final spiral position so it is at least visible (may overlap).
-    if (!found) {
-      node.x = Math.cos(theta) * r;
-      node.y = Math.sin(theta) * r;
-    }
-  }
-  return sorted;
+interface Bounds {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+  width: number;
+  height: number;
 }
 
-/* =============================================================
- * Iterative font-size fitting
- * ============================================================= */
-
-/**
- * Run the spiral layout with the current font size, then adjust
- * baseFontSize until the packed cloud fits the paper with >= 80% fill.
- *
- * Output `PlacedQuote.x` / `.y` are CENTER coordinates relative to
- * the paper center, ready for `left: calc(50% + x - w/2)px` rendering.
- */
 export function iterativeFitLayout(
   quotes: Quote[],
   canvasW: number,
   canvasH: number,
+  options: IterativeFitOptions = {},
 ): PlacedQuote[] {
-  const normalized: Quote[] = quotes.map((q) => ({
-    ...q,
-    weight: q.weight ?? 2,
+  if (quotes.length === 0) return [];
+
+  const normalized: Quote[] = quotes.map((quote) => ({
+    ...quote,
+    weight: quote.weight ?? 2,
   }));
+  const showAuthor = options.showAuthor ?? false;
 
-  // Sort by weight descending (heaviest first → center)
-  const sorted = normalized
-    .slice()
-    .sort((a, b) => (b.weight ?? 2) - (a.weight ?? 2));
+  // 1. Available area inside the page margins.
+  const margin = Math.round(Math.min(canvasW, canvasH) * MARGIN_RATIO);
+  const availW = Math.max(40, canvasW - margin * 2);
+  const availH = Math.max(40, canvasH - margin * 2);
+  const aspect = availW / availH;
 
-  let baseFontSize = 20;
-  let lastPlaced: PlacedQuote[] = [];
-  // Track the best fitting result seen so far (no overflow, highest fill).
-  // The shrink/grow oscillation may never produce a perfect fit in 10
-  // iterations, so we fall back to whatever came closest to fitting.
-  let bestPlaced: PlacedQuote[] | null = null;
-  let bestFill = -Infinity;
+  const run = (base: number): FitResult =>
+    layoutOnce(normalized, base, availW, availH, aspect, showAuthor);
 
-  for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-    const result = layoutOnce(sorted, baseFontSize, canvasW, canvasH);
-    lastPlaced = result.placed;
+  // 2. Seed font size from an area-coverage estimate so we start near the
+  //    answer (the grow/shrink loop then nails the largest size that fits).
+  const seedMeasured = measureQuotes(
+    normalized,
+    REFERENCE_FONT,
+    availW,
+    showAuthor,
+  );
+  const seedArea = seedMeasured.reduce((sum, m) => sum + m.width * m.height, 0);
+  const fontScale = seedArea > 0
+    ? Math.sqrt((TARGET_COVERAGE * availW * availH) / seedArea)
+    : 1;
+  let base = clamp(REFERENCE_FONT * fontScale, MIN_FONT, MAX_FONT);
 
-    if (!result.overflows && result.fillRatio > bestFill) {
-      bestPlaced = result.placed;
-      bestFill = result.fillRatio;
+  // 3. Grow while it fits, otherwise shrink until it fits. Keep the largest
+  //    feasible layout we have seen.
+  let current = run(base);
+  let best: FitResult | null = current.fits ? current : null;
+
+  if (current.fits) {
+    for (let i = 0; i < MAX_STEPS; i += 1) {
+      const next = clamp(base * GROW_FACTOR, MIN_FONT, MAX_FONT);
+      if (next === base) break;
+      const result = run(next);
+      if (!result.fits) break;
+      base = next;
+      best = result;
     }
-
-    if (!result.overflows && result.fillRatio >= FILL_THRESHOLD) {
-      return centerContent(result.placed, canvasW, canvasH);
-    }
-
-    if (result.overflows) {
-      baseFontSize *= SHRINK_FACTOR;
-    } else {
-      baseFontSize *= GROW_FACTOR;
+  } else {
+    for (let i = 0; i < MAX_STEPS; i += 1) {
+      base = clamp(base * SHRINK_FACTOR, MIN_FONT, MAX_FONT);
+      current = run(base);
+      if (current.fits || base <= MIN_FONT) {
+        best = current;
+        break;
+      }
     }
   }
 
-  // Reached the iteration cap — return the best non-overflowing layout
-  // if we ever had one, otherwise fall back to the last placed result.
-  return centerContent(bestPlaced ?? lastPlaced, canvasW, canvasH);
-}
+  const chosen = best ?? current;
 
-interface LayoutRun {
-  placed: PlacedQuote[];
-  overflows: boolean;
-  fillRatio: number;
+  // 4. Push the cluster outward so it fills the page edge to edge.
+  return expandToFill(chosen.placed, availW, availH);
 }
 
 function layoutOnce(
-  sorted: Quote[],
+  quotes: Quote[],
   baseFontSize: number,
-  canvasW: number,
-  canvasH: number,
-): LayoutRun {
-  const prepared = prepareQuotes(sorted, baseFontSize);
+  availW: number,
+  availH: number,
+  aspect: number,
+  showAuthor: boolean,
+): FitResult {
+  const measured = measureQuotes(quotes, baseFontSize, availW, showAuthor);
 
-  // Measure every quote at the current font size
-  const measured = prepared.map((pq) => {
-    const w = pq.quote.weight ?? 2;
-    const maxWidth = maxWidthForWeight(baseFontSize, w);
-    const lineHeight = Math.round(pq.fontSize * LINE_HEIGHT_RATIO);
-    const m = measureQuote(pq.prepared, maxWidth, lineHeight);
-    const lines = getQuoteLines(pq.prepared, maxWidth);
-    return { pq, maxWidth, lineHeight, lines, w: m.width, h: m.height };
-  });
-
-  // Build plain QuoteNode list for the spiral algorithm
   const nodes: QuoteNode[] = measured.map((m) => ({
-    text: m.pq.quote.text,
-    author: m.pq.quote.author,
-    weight: m.pq.quote.weight ?? 2,
-    width: m.w,
-    height: m.h,
+    text: m.quote.text,
+    author: m.quote.author,
+    weight: m.quote.weight ?? 2,
+    width: m.width,
+    height: m.height,
   }));
+  const measuredByNode = new Map<QuoteNode, MeasuredQuote>();
+  nodes.forEach((node, index) => measuredByNode.set(node, measured[index]));
 
-  const placedNodes = calculateLayout(nodes, COLLISION_PADDING);
+  const padding = Math.max(6, baseFontSize * PADDING_RATIO);
+  const placedNodes = calculateLayout(nodes, padding, aspect).filter(
+    (node) => typeof node.x === 'number' && typeof node.y === 'number',
+  );
 
-  // Build PlacedQuote[] — node.x / .y are center coords
-  const placed: PlacedQuote[] = placedNodes.map((node, i) => {
-    const m = measured[i];
-    const w = m.pq.quote.weight ?? 2;
-    const color =
-      w === 3 ? 'var(--w3-color)' : w === 2 ? 'var(--w2-color)' : 'var(--w1-color)';
-    const className: PlacedQuote['className'] =
-      w === 3 ? 'w3' : w === 2 ? 'w2' : 'w1';
+  const placed: PlacedQuote[] = placedNodes.map((node) => {
+    const m = measuredByNode.get(node);
+    if (!m) throw new Error('Missing measured quote for placed node.');
+    const weight = m.quote.weight ?? 2;
+
     return {
-      x: node.x ?? 0,
-      y: node.y ?? 0,
+      x: node.x as number,
+      y: node.y as number,
       w: node.width,
       h: node.height,
-      fontSize: m.pq.fontSize,
+      fontSize: m.fontSize,
       lineHeight: m.lineHeight,
-      fontWeight: m.pq.fontWeight,
+      fontWeight: m.fontWeight,
       maxWidth: m.maxWidth,
       lines: m.lines,
-      color,
-      className,
-      quote: m.pq.quote,
+      authorText: m.authorText,
+      authorFontSize: m.authorFontSize,
+      authorLineHeight: m.authorLineHeight,
+      authorMarginTop: m.authorMarginTop,
+      color: weight === 3
+        ? 'var(--w3-color)'
+        : weight === 2
+          ? 'var(--w2-color)'
+          : 'var(--w1-color)',
+      className: weight === 3 ? 'w3' : weight === 2 ? 'w2' : 'w1',
+      quote: m.quote,
     };
   });
 
-  // Compute bounding box (top-left / bottom-right in canvas coords,
-  // assuming the spiral origin (0,0) will become the paper center).
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const p of placed) {
-    const left = p.x - p.w / 2;
-    const right = p.x + p.w / 2;
-    const top = p.y - p.h / 2;
-    const bottom = p.y + p.h / 2;
-    if (left < minX) minX = left;
-    if (top < minY) minY = top;
-    if (right > maxX) maxX = right;
-    if (bottom > maxY) maxY = bottom;
-  }
+  const centered = centerContent(placed);
+  const bounds = getBounds(centered);
 
-  const contentW = Math.max(0, maxX - minX);
-  const contentH = Math.max(0, maxY - minY);
-  const contentArea = contentW * contentH;
-  const paperArea = canvasW * canvasH;
+  return {
+    placed: centered,
+    bounds,
+    // small tolerance for floating point
+    fits: bounds.width <= availW + 0.5 && bounds.height <= availH + 0.5,
+  };
+}
 
-  // After centering, the content occupies contentW × contentH. The paper is
-  // canvasW × canvasH, so the cloud overflows when its dimensions exceed
-  // the paper dimensions.
-  const overflows = contentW > canvasW || contentH > canvasH;
-  const fillRatio = paperArea > 0 ? contentArea / paperArea : 0;
+function measureQuotes(
+  quotes: Quote[],
+  baseFontSize: number,
+  availW: number,
+  showAuthor: boolean,
+): MeasuredQuote[] {
+  const prepared = prepareQuotes(quotes, baseFontSize);
 
-  return { placed, overflows, fillRatio };
+  return prepared.map((preparedQuote): MeasuredQuote => {
+    const weight = preparedQuote.quote.weight ?? 2;
+    // Cap wrap width so a single quote can never span more than ~70% of the
+    // page, which keeps long quotes inside the borders.
+    const maxWidth = Math.min(
+      maxWidthForWeight(baseFontSize, weight),
+      availW * 0.7,
+    );
+    const lineHeight = Math.round(preparedQuote.fontSize * LINE_HEIGHT_RATIO);
+    const textMeasure = measureQuoteText(
+      preparedQuote.prepared,
+      maxWidth,
+      lineHeight,
+    );
+    const authorMeasure = showAuthor
+      ? measureAuthorLine(preparedQuote.quote.author, preparedQuote.fontSize)
+      : null;
+    const authorHeight = authorMeasure
+      ? authorMeasure.marginTop + authorMeasure.lineHeight
+      : 0;
+
+    return {
+      quote: preparedQuote.quote,
+      width: Math.max(textMeasure.width, authorMeasure?.width ?? 0),
+      height: textMeasure.height + authorHeight,
+      fontSize: preparedQuote.fontSize,
+      lineHeight,
+      fontWeight: preparedQuote.fontWeight,
+      maxWidth,
+      lines: textMeasure.lines,
+      authorText: authorMeasure?.text,
+      authorFontSize: authorMeasure?.fontSize,
+      authorLineHeight: authorMeasure?.lineHeight,
+      authorMarginTop: authorMeasure?.marginTop,
+    };
+  });
 }
 
 /**
- * Shift all nodes so that the cloud is centered at the spiral origin.
- *
- * The renderer anchors each quote with `left: calc(50% + x - w/2)px`,
- * which already places x=0 at the paper center. Therefore the cloud's
- * bounding-box midpoint must end up at (0, 0) — NOT at the paper center.
- * The shift is simply `(-cx, -cy)` where (cx, cy) is the bbox midpoint
- * produced by the spiral.
+ * Spread the (already centered) cluster outward so the extreme boxes touch the
+ * page margins. X and Y are scaled independently, which is what produces the
+ * edge-to-edge fill when the orientation changes. Because every box only moves
+ * further from the centroid, no new collisions can be introduced.
  */
-function centerContent(
+function expandToFill(
   placed: PlacedQuote[],
-  _canvasW: number,
-  _canvasH: number,
+  availW: number,
+  availH: number,
 ): PlacedQuote[] {
   if (placed.length === 0) return placed;
 
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  const halfW = availW / 2;
+  const halfH = availH / 2;
+  let sx = MAX_POSITION_EXPAND;
+  let sy = MAX_POSITION_EXPAND;
+
+  for (const p of placed) {
+    if (Math.abs(p.x) > 1) {
+      const limit = (halfW - p.w / 2) / Math.abs(p.x);
+      if (limit < sx) sx = limit;
+    }
+    if (Math.abs(p.y) > 1) {
+      const limit = (halfH - p.h / 2) / Math.abs(p.y);
+      if (limit < sy) sy = limit;
+    }
+  }
+
+  const scaleX = clamp(sx, 1, MAX_POSITION_EXPAND);
+  const scaleY = clamp(sy, 1, MAX_POSITION_EXPAND);
+
+  if (scaleX === 1 && scaleY === 1) return placed;
+
+  return placed.map((p) => ({ ...p, x: p.x * scaleX, y: p.y * scaleY }));
+}
+
+function getBounds(placed: PlacedQuote[]): Bounds {
+  if (placed.length === 0) {
+    return { minX: 0, maxX: 0, minY: 0, maxY: 0, width: 0, height: 0 };
+  }
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
   for (const p of placed) {
     const left = p.x - p.w / 2;
     const right = p.x + p.w / 2;
     const top = p.y - p.h / 2;
     const bottom = p.y + p.h / 2;
     if (left < minX) minX = left;
-    if (top < minY) minY = top;
     if (right > maxX) maxX = right;
+    if (top < minY) minY = top;
     if (bottom > maxY) maxY = bottom;
   }
 
-  const cx = (minX + maxX) / 2;
-  const cy = (minY + maxY) / 2;
-  // Negate only — the renderer's `calc(50% + x)` adds the paper
-  // half-size for us, so we must not double-count it.
-  const shiftX = -cx;
-  const shiftY = -cy;
+  return { minX, maxX, minY, maxY, width: maxX - minX, height: maxY - minY };
+}
 
-  return placed.map((p) => ({
-    ...p,
-    x: p.x + shiftX,
-    y: p.y + shiftY,
-  }));
+function centerContent(placed: PlacedQuote[]): PlacedQuote[] {
+  const bounds = getBounds(placed);
+  const centerX = (bounds.minX + bounds.maxX) / 2;
+  const centerY = (bounds.minY + bounds.maxY) / 2;
+
+  return placed.map((p) => ({ ...p, x: p.x - centerX, y: p.y - centerY }));
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }

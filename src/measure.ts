@@ -1,21 +1,35 @@
-import { prepareWithSegments, layout, layoutWithLines } from '@chenglou/pretext';
+import {
+  layout,
+  materializeLineRange,
+  prepareWithSegments as prepare,
+  walkLineRanges,
+} from '@chenglou/pretext';
 import type { PreparedTextWithSegments } from '@chenglou/pretext';
 import type { Quote } from './types';
 
-const FONT_FAMILY = '"Noto Serif SC", "Cormorant Garamond", "Inter", Georgia, serif';
+export const FONT_FAMILY = '"Noto Serif SC", "Source Han Serif SC", Georgia, serif';
+export const LINE_HEIGHT_RATIO = 1.18;
+export const AUTHOR_FONT_SIZE_RATIO = 0.55;
+export const AUTHOR_LINE_HEIGHT_RATIO = 1.15;
+export const AUTHOR_MARGIN_RATIO = 0.35;
 
-/** Weight → font weight number */
 function fontWeightForWeight(w: number): number {
   switch (w) {
-    case 3: return 700;
-    case 2: return 500;
-    default: return 400;
+    case 3:
+      return 700;
+    case 2:
+      return 500;
+    default:
+      return 400;
   }
 }
 
-/** Build CSS font string for Pretext prepare */
-function fontString(fontSize: number, fontWeight: number): string {
-  return `${fontWeight} ${fontSize}px ${FONT_FAMILY}`;
+function fontString(
+  fontSize: number,
+  fontWeight: number,
+  fontStyle = 'normal',
+): string {
+  return `${fontStyle} ${fontWeight} ${fontSize}px ${FONT_FAMILY}`;
 }
 
 export interface PreparedQuote {
@@ -25,70 +39,105 @@ export interface PreparedQuote {
   fontWeight: number;
 }
 
-/**
- * Prepare all quotes with Pretext for a given baseFontSize.
- * This must be called whenever baseFontSize changes because
- * the font string includes the font size.
- */
+export interface MeasuredText {
+  width: number;
+  height: number;
+  lineCount: number;
+  lines: string[];
+}
+
+export interface MeasuredAuthorLine {
+  text: string;
+  width: number;
+  fontSize: number;
+  lineHeight: number;
+  marginTop: number;
+}
+
 export function prepareQuotes(
   quotes: Quote[],
   baseFontSize: number,
 ): PreparedQuote[] {
   return quotes.map((q) => {
-    const w = q.weight ?? 2;
-    const fontSize = fontSizeForWeight(baseFontSize, w);
-    const fontWeight = fontWeightForWeight(w);
-    const prepared = prepareWithSegments(q.text, fontString(fontSize, fontWeight));
+    const weight = q.weight ?? 2;
+    const fontSize = fontSizeForWeight(baseFontSize, weight);
+    const fontWeight = fontWeightForWeight(weight);
+    const prepared = prepare(q.text, fontString(fontSize, fontWeight), {
+      letterSpacing: 0,
+    });
+
     return { quote: q, prepared, fontSize, fontWeight };
   });
 }
 
-/** Map weight to actual font size based on baseFontSize */
 export function fontSizeForWeight(baseFontSize: number, weight: number): number {
   switch (weight) {
-    case 3: return baseFontSize * 1.5;
-    case 2: return baseFontSize * 1.0;
-    default: return baseFontSize * 0.7;
+    case 3:
+      return baseFontSize * 1.5;
+    case 2:
+      return baseFontSize;
+    default:
+      return baseFontSize * 0.7;
   }
 }
 
-/**
- * Map weight to maxWidth (proportional to baseFontSize so the
- * spiral packing can actually fit on the paper).
- *
- * The floor of 30 px prevents pathological one-character-per-line
- * wrapping when baseFontSize shrinks to a few pixels during
- * iterative fitting.
- */
 export function maxWidthForWeight(baseFontSize: number, weight: number): number {
-  const fs = fontSizeForWeight(baseFontSize, weight);
-  return Math.max(30, fs * 7);
+  const fontSize = fontSizeForWeight(baseFontSize, weight);
+  return Math.max(30, fontSize * 7);
 }
 
-/** Measure a single prepared quote: returns { width, height, lineCount } */
-export function measureQuote(
+export function measureQuoteText(
   prepared: PreparedTextWithSegments,
   maxWidth: number,
   lineHeight: number,
-): { width: number; height: number; lineCount: number } {
+): MeasuredText {
   const result = layout(prepared, maxWidth, lineHeight);
-  // Get actual max line width via layoutWithLines
-  const withLines = layoutWithLines(prepared, maxWidth, lineHeight);
   let maxLineWidth = 0;
-  for (const line of withLines.lines) {
-    if (line.width > maxLineWidth) maxLineWidth = line.width;
+  const lines: string[] = [];
+
+  walkLineRanges(prepared, maxWidth, (line) => {
+    if (line.width > maxLineWidth) {
+      maxLineWidth = line.width;
+    }
+    lines.push(materializeLineRange(prepared, line).text);
+  });
+
+  return {
+    width: maxLineWidth,
+    height: result.height,
+    lineCount: result.lineCount,
+    lines,
+  };
+}
+
+export function measureAuthorLine(
+  author: string,
+  quoteFontSize: number,
+): MeasuredAuthorLine | null {
+  if (!author) {
+    return null;
   }
-  return { width: maxLineWidth, height: result.height, lineCount: result.lineCount };
-}
 
-/** Get the text content of each line for rendering */
-export function getQuoteLines(
-  prepared: PreparedTextWithSegments,
-  maxWidth: number,
-): string[] {
-  const result = layoutWithLines(prepared, maxWidth, 0);
-  return result.lines.map((l) => l.text);
-}
+  const fontSize = quoteFontSize * AUTHOR_FONT_SIZE_RATIO;
+  const lineHeight = Math.round(fontSize * AUTHOR_LINE_HEIGHT_RATIO);
+  const marginTop = quoteFontSize * AUTHOR_MARGIN_RATIO;
+  const text = `- ${author}`;
+  const prepared = prepare(text, fontString(fontSize, 500, 'italic'), {
+    letterSpacing: 0,
+  });
+  let width = 0;
 
-/** Line height multiplier */
-export const LINE_HEIGHT_RATIO = 1.18;
+  walkLineRanges(prepared, 10000, (line) => {
+    if (line.width > width) {
+      width = line.width;
+    }
+  });
+
+  return {
+    text,
+    width,
+    fontSize,
+    lineHeight,
+    marginTop,
+  };
+}
