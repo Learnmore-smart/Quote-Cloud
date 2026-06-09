@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/config.ts","./src/layout.ts","./src/main.tsx","./src/measure.ts","./src/print.ts","./src/seed.ts","./src/types.ts","./src/weights.ts","./src/components/controlpanel.tsx","./src/components/loader.tsx","./src/components/papercanvas.tsx","./src/components/quoteitem.tsx","./vite.config.ts"],"version":"5.9.3"}

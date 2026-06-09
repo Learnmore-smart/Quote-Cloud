@@ -1,0 +1,26 @@
+# Checklist
+
+- [x] `package.json` 包含 `react`, `react-dom`, `@chenglou/pretext`, `@vitejs/plugin-react` 依赖
+- [x] `tsconfig.json` 包含 `"jsx": "react-jsx"` 配置
+- [x] `vite.config.ts` 使用 `@vitejs/plugin-react` 插件
+- [x] `index.html` 包含 `<div id="app">` 挂载点
+- [x] 文本测量使用 `@chenglou/pretext` 的 `prepareWithSegments` + `layout` + `layoutWithLines`，不使用 Canvas `measureText`
+- [x] `baseFontSize` 起始值为 20px
+- [x] 字号映射：weight 3 = baseFontSize × 1.5，weight 2 = baseFontSize × 1.0，weight 1 = baseFontSize × 0.7
+- [x] 迭代缩放循环：溢出时 baseFontSize × 0.9，填充不足 80% 时 baseFontSize × 1.1
+- [x] 迭代最多 10 轮
+- [x] 不使用 CSS `transform: scale()` 缩放内容（仅 Hover 交互可用 scale）
+- [x] Quote 以实际字号和绝对定位渲染（`position: absolute; left; top; font-size`）
+- [x] AABB 碰撞检测 padding 为 12px
+- [x] 阿基米德螺旋线定位算法正常工作
+- [x] React 组件结构：App → ControlPanel + PaperCanvas → QuoteItem
+- [x] 控制面板：纸张下拉 / 方向切换 / 作者开关 / Print 按钮
+- [x] `@media print` 隐藏控制面板、白底深灰文字、无 box-shadow / blur
+- [x] 打印前动态注入 `@page { size: <paper> <orientation>; margin: 0; }`
+- [x] Hover 聚焦：被悬停 quote 放大高亮，其他 quote 变暗模糊
+- [x] 作者默认隐藏；全局开关或 Hover 单条时淡入显示
+- [x] OpenRouter 请求使用 `google/gemini-flash-1.5` 模型
+- [x] API Key 缺失 / 网络失败时回退到本地启发式评分
+- [x] 15 条初始 Quote 数据与规格一致
+- [x] 切换纸张 / 方向时布局实时重新计算
+- [x] 视觉风格保留：深色屏幕态、纸张画板、艺术感排版
