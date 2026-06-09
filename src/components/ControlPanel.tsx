@@ -38,7 +38,7 @@ export function ControlPanel({
   return (
     <aside
       id="controls"
-      className="controls fixed right-5 top-5 z-50 w-72 select-none rounded-2xl border border-white/60 bg-white/75 p-5 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.35)] ring-1 ring-black/5 backdrop-blur-xl [font-family:Inter,ui-sans-serif,system-ui,sans-serif]"
+      className="controls fixed right-5 top-5 z-50 w-72 select-none rounded-2xl border border-white/60 bg-white/75 p-5 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.35)] ring-1 ring-black/5 backdrop-blur-xl opacity-20 hover:opacity-100 transition-opacity duration-300 ease-in-out [font-family:Inter,ui-sans-serif,system-ui,sans-serif]"
     >
       {/* Header */}
       <div className="mb-5 flex items-center gap-3">
@@ -62,7 +62,7 @@ export function ControlPanel({
           <select
             value={paper}
             onChange={(e) => onPaperChange(e.target.value as PaperKey)}
-            className="w-full appearance-none rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-sm font-medium text-neutral-800 shadow-sm outline-none transition focus:border-neutral-900 focus:ring-2 focus:ring-neutral-900/10"
+            className="w-full cursor-pointer appearance-none rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-sm font-medium text-neutral-800 shadow-sm outline-none transition hover:border-neutral-300 hover:bg-neutral-50 focus:border-neutral-900 focus:ring-2 focus:ring-neutral-900/10"
           >
             {PAPER_OPTIONS.map(({ value, label, dims }) => (
               <option key={value} value={value}>
@@ -94,10 +94,10 @@ export function ControlPanel({
                 type="button"
                 onClick={() => onOrientationChange(value)}
                 className={[
-                  'flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold capitalize transition',
+                  'flex cursor-pointer items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold capitalize transition',
                   active
-                    ? 'bg-white text-neutral-900 shadow-sm'
-                    : 'text-neutral-500 hover:text-neutral-800',
+                    ? 'bg-white text-neutral-900 shadow-sm hover:bg-neutral-50'
+                    : 'text-neutral-500 hover:bg-white/60 hover:text-neutral-800',
                 ].join(' ')}
               >
                 <span
@@ -129,8 +129,8 @@ export function ControlPanel({
           aria-checked={showAuthor}
           onClick={() => onShowAuthorChange(!showAuthor)}
           className={[
-            'relative inline-flex h-6 w-11 flex-none items-center rounded-full transition-colors duration-200',
-            showAuthor ? 'bg-neutral-900' : 'bg-neutral-300',
+            'relative inline-flex h-6 w-11 flex-none cursor-pointer items-center rounded-full transition-colors duration-200',
+            showAuthor ? 'bg-neutral-900 hover:bg-neutral-800' : 'bg-neutral-300 hover:bg-neutral-400',
           ].join(' ')}
         >
           <span

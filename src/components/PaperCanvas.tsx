@@ -1,6 +1,6 @@
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import type { CSSProperties } from 'react';
-import { QuoteItem } from './QuoteItem';
+import { AutoFitQuote } from './AutoFitQuote';
 import { Loader } from './Loader';
 import { packRows } from '../scatter';
 import type { ScatterItem } from '../scatter';
@@ -14,23 +14,14 @@ interface PaperCanvasProps {
 }
 
 /* =============================================================================
- * Brute-force Auto-Fit Engine
+ * Bento Box Mosaic Canvas
  * -----------------------------------------------------------------------------
- * The paper is an absolute bounded arena (`overflow: hidden`). We lay every
- * quote into explicit full-width rows (see `packRows`), then binary-search the
- * largest `--base` font size where the cloud's natural `scrollHeight` still
- * fits inside the arena's `clientHeight`. Because the rows have NO horizontal
- * holes and a readability floor (>= 1.2em), the search now settles on a much
- * larger, balanced base that fills the page top to bottom without crushing the
- * smaller quotes into dust.
+ * The paper is a rigid, hole-free mosaic. `packRows` tiles the quotes into rows
+ * (random vertical flex) and cells (random horizontal flex) that together cover
+ * 100% of the page. There is NO global font search anymore — each cell renders
+ * an `<AutoFitQuote>` that grows its own text like a gas until it hits the walls
+ * of its bounding box.
  * ========================================================================== */
-
-/** Smallest base font we will ever try (px, in virtual canvas space). */
-const MIN_FONT = 5;
-/** Largest base font we will ever try (px, in virtual canvas space). */
-const MAX_FONT = 100;
-/** Stop the search once the window is tighter than this (px). */
-const PRECISION = 0.5;
 
 export function PaperCanvas({
   canvasSize,
@@ -39,49 +30,8 @@ export function PaperCanvas({
   showAuthor,
   loading,
 }: PaperCanvasProps) {
-  const arenaRef = useRef<HTMLDivElement>(null);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-
-  // Group the flat quote list into explicit full-width rows of 1 or 2 quotes.
+  // Tile the flat quote list into the rigid full-bleed mosaic.
   const rows = useMemo(() => packRows(items), [items]);
-
-  // Auto-fit: measure the real DOM and binary-search the base font size.
-  useLayoutEffect(() => {
-    const arena = arenaRef.current;
-    const wrapper = wrapperRef.current;
-    if (!arena || !wrapper) return;
-    if (items.length === 0) return;
-
-    // The arena's inner height is the hard ceiling. The wrapper carries the
-    // padding, so a fit means `wrapper.scrollHeight <= arena.clientHeight`.
-    const ceiling = arena.clientHeight;
-
-    /** Apply a candidate size and force a synchronous reflow + measure. */
-    const fitsAt = (size: number): boolean => {
-      wrapper.style.setProperty('--base', `${size}px`);
-      // Reading scrollHeight forces layout, so the loop measures fresh values.
-      return wrapper.scrollHeight <= ceiling;
-    };
-
-    let min = MIN_FONT;
-    let max = MAX_FONT;
-    let best = MIN_FONT;
-
-    while (max - min > PRECISION) {
-      const mid = (min + max) / 2;
-      if (fitsAt(mid)) {
-        // Fits — remember it and push for something bigger.
-        best = mid;
-        min = mid;
-      } else {
-        // Too big — pull the ceiling down.
-        max = mid;
-      }
-    }
-
-    // Lock in the largest safe size.
-    wrapper.style.setProperty('--base', `${best}px`);
-  }, [rows, items, canvasSize.w, canvasSize.h, showAuthor]);
 
   const canvasStyle: CSSProperties = {
     width: `${canvasSize.w}px`,
@@ -101,14 +51,17 @@ export function PaperCanvas({
         <div
           className="paper-canvas"
           id="paperCanvas"
-          ref={arenaRef}
           style={canvasStyle}
         >
-          <div className="scatter-field" ref={wrapperRef}>
+          <div className="scatter-field">
             {rows.map((row, rowIndex) => (
-              <div className="quote-row" key={`row-${rowIndex}`}>
+              <div
+                className="quote-row"
+                key={`row-${rowIndex}`}
+                style={{ flexGrow: row.flex, flexShrink: 1, flexBasis: 0 }}
+              >
                 {row.cells.map((cell, cellIndex) => (
-                  <QuoteItem
+                  <AutoFitQuote
                     key={`${cell.item.quote.author}-${rowIndex}-${cellIndex}`}
                     item={cell.item}
                     flex={cell.flex}
