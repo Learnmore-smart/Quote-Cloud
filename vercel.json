@@ -1,0 +1,9 @@
+{
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/quote-cloud/",
+      "permanent": true
+    }
+  ]
+}

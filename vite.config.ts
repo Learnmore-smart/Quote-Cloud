@@ -3,13 +3,14 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
+  base: '/quote-cloud/',
   plugins: [react(), tailwindcss()],
   server: {
     port: 3000,
     strictPort: false,
   },
   build: {
-    outDir: 'dist',
+    outDir: 'dist/quote-cloud',
     sourcemap: true,
   },
 });
