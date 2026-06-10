@@ -36,6 +36,8 @@ export interface ScatterItem {
   lineHeight: number;
   /** Force UPPERCASE rendering (used by the Hero manifesto row). */
   uppercase: boolean;
+  /** Strict contrast bucket. LOUD = black + big box, SOFT = light + small box. */
+  emphasis: 'loud' | 'soft';
 }
 
 /** A single closed box in the mosaic. */
@@ -64,19 +66,11 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-/** Volume map: importance (weight) → loudness (font weight + line height). */
-const VOLUME: Record<1 | 2 | 3, { fontWeight: number; lineHeight: number }> = {
-  3: { fontWeight: 800, lineHeight: 1.05 }, // LOUD
-  2: { fontWeight: 500, lineHeight: 1.15 }, // medium
-  1: { fontWeight: 400, lineHeight: 1.25 }, // whisper
-};
+/** Volume map kept for reference; styling is now driven by strict parity
+ * alternation (see `assignScatter`) rather than the AI weight bucket. */
 
 /** Random vertical row weights — the rows divide the page height unevenly. */
 const ROW_FLEXES = [1, 1.4, 1.8, 2.2] as const;
-/** Random horizontal cell weights — the cells divide a row width unevenly. */
-const CELL_FLEXES = [1, 1.5, 2, 2.5] as const;
-
-const ALIGNS = ['left', 'center', 'right', 'justify'] as const;
 
 /**
  * Turn raw quotes into styled cloud items. Index 0 is always the Hero
@@ -94,6 +88,10 @@ export function assignScatter(quotes: Quote[]): ScatterItem[] {
     return byAuthor >= 0 ? byAuthor : 0;
   })();
 
+  // Running position within the NON-hero stream, used for strict parity
+  // alternation of loud/soft styling.
+  let nonHeroSeq = 0;
+
   return quotes.map((quote, index) => {
     // --- Hero: the loud, full-width manifesto headline -------------------
     if (index === heroIdx) {
@@ -102,24 +100,29 @@ export function assignScatter(quotes: Quote[]): ScatterItem[] {
         isHero: true,
         align: 'center',
         fontWeight: 900,
-        lineHeight: 0.95,
+        lineHeight: 0.9,
         uppercase: true,
+        emphasis: 'loud',
       };
     }
 
-    // --- Everyone else: a deterministic style flavor ---------------------
-    const rnd = mulberry32(index * 2654435761 + 11);
-    const weight = (quote.weight ?? 2) as 1 | 2 | 3;
-    const vol = VOLUME[weight];
+    // --- Everyone else: STRICT alternating contrast ----------------------
+    // Adjacent quotes must look drastically different. We alternate by parity
+    // across the non-hero stream: LOUD (black weight, claims a flex:2 box) then
+    // SOFT (light weight, claims a flex:1 box), with ZERO exceptions. The actual
+    // font SIZE is still grown per-cell by <AutoFitQuote>, so a LOUD quote in a
+    // 2× box renders far larger than its SOFT neighbour.
+    const isLoud = nonHeroSeq % 2 === 0;
+    nonHeroSeq += 1;
 
     return {
       quote,
       isHero: false,
-      // Pick a varied alignment so the mosaic reads loose, never a stacked poem.
-      align: ALIGNS[Math.floor(rnd() * ALIGNS.length)],
-      fontWeight: vol.fontWeight,
-      lineHeight: vol.lineHeight,
+      align: 'justify',
+      fontWeight: isLoud ? 900 : 300,
+      lineHeight: isLoud ? 1.05 : 1.1,
       uppercase: false,
+      emphasis: isLoud ? 'loud' : 'soft',
     };
   });
 }
@@ -133,7 +136,9 @@ function buildRow(group: ScatterItem[], seed: number): QuoteRow {
 
   const cells: QuoteCell[] = group.map((item) => ({
     item,
-    flex: CELL_FLEXES[Math.floor(rnd() * CELL_FLEXES.length)],
+    // Strict contrast: a LOUD box claims 2× the width of a SOFT box, so within
+    // every row one quote is massive+heavy and its neighbour is small+light.
+    flex: item.emphasis === 'loud' ? 2 : 1,
   }));
 
   return {
@@ -205,8 +210,9 @@ export function packRows(items: ScatterItem[]): QuoteRow[] {
           isHero: true,
           align: 'center',
           fontWeight: 900,
-          lineHeight: 0.95,
+          lineHeight: 0.9,
           uppercase: true,
+          emphasis: 'loud',
         },
         flex: 1,
       },

@@ -95,14 +95,13 @@ export function AutoFitQuote({ item, flex, showAuthor }: AutoFitQuoteProps) {
     height: '100%',
   };
 
-  // Smart typography. The Hero stays centered + uppercase for maximum visual
-  // prominence; every other block uses justified text with the modern
-  // `text-wrap: pretty` line-breaker to avoid widows/orphans on the last line.
+  // Smart typography. The dynamic, per-item bits (weight, line-height, casing)
+  // stay inline; the balanced-justification rules now live in styles.css on the
+  // `.quote` / `.quote-hero` classes to keep this component clean and ensure the
+  // browser reliably applies `text-wrap: balance` + `text-align-last: justify`.
   const textStyle: CSSProperties = {
-    textAlign: isHero ? 'center' : 'justify',
-    textWrap: 'pretty',
     fontWeight,
-    lineHeight: isHero ? lineHeight : 1.15,
+    lineHeight,
     textTransform: uppercase ? 'uppercase' : 'none',
   };
 
