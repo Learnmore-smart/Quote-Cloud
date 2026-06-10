@@ -1,0 +1,44 @@
+{
+  "controlPanel": {
+    "home": "Home",
+    "github": "GitHub",
+    "title": "Quote Cloud",
+    "subtitle": "AI Layout Studio",
+    "paper": "Paper",
+    "orientation": "Orientation",
+    "showAuthor": "Show Author",
+    "showAuthorDesc": "Attribution under each quote",
+    "manageQuotes": "Manage Quotes",
+    "printPoster": "Print Poster",
+    "language": "Language",
+    "orientations": {
+      "portrait": "Portrait",
+      "landscape": "Landscape"
+    }
+  },
+  "quoteManager": {
+    "title": "Manage Quotes",
+    "subtitleSingular": "{count} quote · saved locally",
+    "subtitlePlural": "{count} quotes · saved locally",
+    "feelLucky": "I Feel Lucky",
+    "addQuoteLabel": "Add a quote",
+    "quotePlaceholder": "Quote text…",
+    "authorPlaceholder": "Author",
+    "addQuoteBtn": "Add Quote",
+    "currentDeckLabel": "Current deck",
+    "emptyState": "No quotes yet. Add one above or hit “I Feel Lucky”.",
+    "weightOptions": {
+      "auto": "Auto (Checkerboard)",
+      "hero": "Hero (Center Massive)",
+      "bold": "Bold",
+      "light": "Light"
+    }
+  },
+  "app": {
+    "signature": "Quote Cloud · AI Layout Engine"
+  },
+  "loader": {
+    "composing": "Composing",
+    "signature": "Quote Cloud · AI Layout"
+  }
+}

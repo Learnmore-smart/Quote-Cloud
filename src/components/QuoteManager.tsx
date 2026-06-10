@@ -8,16 +8,10 @@ interface QuoteManagerProps {
   onAdd: (quote: Quote) => void;
   onDelete: (index: number) => void;
   onFeelLucky: () => void;
+  t: any;
 }
 
 type WeightChoice = NonNullable<Quote['weight']>;
-
-const WEIGHT_OPTIONS: Array<{ value: WeightChoice; label: string }> = [
-  { value: 'auto', label: 'Auto (Checkerboard)' },
-  { value: 'hero', label: 'Hero (Center Massive)' },
-  { value: 'bold', label: 'Bold' },
-  { value: 'light', label: 'Light' },
-];
 
 const WEIGHT_BADGE: Record<WeightChoice, string> = {
   auto: 'bg-neutral-100 text-neutral-500',
@@ -40,6 +34,7 @@ export function QuoteManager({
   onAdd,
   onDelete,
   onFeelLucky,
+  t,
 }: QuoteManagerProps) {
   const [text, setText] = useState('');
   const [author, setAuthor] = useState('');
@@ -69,6 +64,13 @@ export function QuoteManager({
     setWeight('auto');
   };
 
+  const weightOptions = [
+    { value: 'auto' as const, label: t.quoteManager.weightOptions.auto },
+    { value: 'hero' as const, label: t.quoteManager.weightOptions.hero },
+    { value: 'bold' as const, label: t.quoteManager.weightOptions.bold },
+    { value: 'light' as const, label: t.quoteManager.weightOptions.light },
+  ];
+
   return (
     <div
       className={[
@@ -90,7 +92,7 @@ export function QuoteManager({
       <aside
         role="dialog"
         aria-modal="true"
-        aria-label="Manage quotes"
+        aria-label={t.quoteManager.title}
         className={[
           'absolute right-0 top-0 flex h-full w-full max-w-md flex-col',
           'border-l border-white/60 bg-white/80 shadow-[-12px_0_40px_-12px_rgba(0,0,0,0.35)] ring-1 ring-black/5 backdrop-blur-2xl',
@@ -102,10 +104,12 @@ export function QuoteManager({
         <div className="flex items-center justify-between border-b border-black/5 px-6 py-5">
           <div className="leading-tight">
             <h2 className="m-0 text-lg font-bold tracking-tight text-neutral-900">
-              Manage Quotes
+              {t.quoteManager.title}
             </h2>
             <p className="m-0 text-xs font-medium text-neutral-400">
-              {quotes.length} {quotes.length === 1 ? 'quote' : 'quotes'} · saved locally
+              {quotes.length === 1
+                ? t.quoteManager.subtitleSingular.replace('{count}', String(quotes.length))
+                : t.quoteManager.subtitlePlural.replace('{count}', String(quotes.length))}
             </p>
           </div>
           <button
@@ -131,18 +135,18 @@ export function QuoteManager({
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 3l2.09 4.26L19 8l-3.5 3.4.83 4.85L12 14l-4.33 2.25L8.5 11.4 5 8l4.91-.74z" />
             </svg>
-            I Feel Lucky
+            {t.quoteManager.feelLucky}
           </button>
 
           {/* Add form */}
           <form onSubmit={handleSubmit} className="mb-6 flex flex-col gap-3">
             <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
-              Add a quote
+              {t.quoteManager.addQuoteLabel}
             </span>
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Quote text…"
+              placeholder={t.quoteManager.quotePlaceholder}
               rows={3}
               className="w-full resize-none rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-sm text-neutral-800 shadow-sm outline-none transition placeholder:text-neutral-400 hover:border-neutral-300 focus:border-neutral-900 focus:ring-2 focus:ring-neutral-900/10"
             />
@@ -150,7 +154,7 @@ export function QuoteManager({
               type="text"
               value={author}
               onChange={(e) => setAuthor(e.target.value)}
-              placeholder="Author"
+              placeholder={t.quoteManager.authorPlaceholder}
               className="w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-sm text-neutral-800 shadow-sm outline-none transition placeholder:text-neutral-400 hover:border-neutral-300 focus:border-neutral-900 focus:ring-2 focus:ring-neutral-900/10"
             />
             <div className="relative">
@@ -159,7 +163,7 @@ export function QuoteManager({
                 onChange={(e) => setWeight(e.target.value as WeightChoice)}
                 className="w-full cursor-pointer appearance-none rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-sm font-medium text-neutral-800 shadow-sm outline-none transition hover:border-neutral-300 focus:border-neutral-900 focus:ring-2 focus:ring-neutral-900/10"
               >
-                {WEIGHT_OPTIONS.map(({ value, label }) => (
+                {weightOptions.map(({ value, label }) => (
                   <option key={value} value={value}>
                     {label}
                   </option>
@@ -177,18 +181,18 @@ export function QuoteManager({
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 5v14M5 12h14" />
               </svg>
-              Add Quote
+              {t.quoteManager.addQuoteBtn}
             </button>
           </form>
 
           {/* Quote list */}
           <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
-            Current deck
+            {t.quoteManager.currentDeckLabel}
           </span>
           <ul className="mt-3 flex flex-col gap-2">
             {quotes.length === 0 && (
               <li className="rounded-xl border border-dashed border-neutral-300 px-3.5 py-6 text-center text-sm text-neutral-400">
-                No quotes yet. Add one above or hit “I Feel Lucky”.
+                {t.quoteManager.emptyState}
               </li>
             )}
             {quotes.map((q, index) => {
@@ -205,7 +209,7 @@ export function QuoteManager({
                         {q.author}
                       </span>
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${badge}`}>
-                        {q.weight ?? 'auto'}
+                        {t.quoteManager.weightOptions[q.weight ?? 'auto']}
                       </span>
                     </div>
                   </div>

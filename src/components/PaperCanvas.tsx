@@ -11,6 +11,8 @@ interface PaperCanvasProps {
   items: ScatterItem[];
   showAuthor: boolean;
   loading: boolean;
+  composingText: string;
+  signatureText: string;
 }
 
 /* =============================================================================
@@ -29,6 +31,8 @@ export function PaperCanvas({
   items,
   showAuthor,
   loading,
+  composingText,
+  signatureText,
 }: PaperCanvasProps) {
   // Tile the flat quote list into the rigid full-bleed mosaic.
   const rows = useMemo(() => packRows(items), [items]);
@@ -116,7 +120,11 @@ export function PaperCanvas({
               );
             })}
           </div>
-          <Loader loading={loading} />
+          <Loader
+            loading={loading}
+            composingText={composingText}
+            signatureText={signatureText}
+          />
         </div>
       </div>
     </div>

@@ -1,13 +1,15 @@
 interface LoaderProps {
   loading: boolean;
+  composingText: string;
+  signatureText: string;
 }
 
-export function Loader({ loading }: LoaderProps) {
+export function Loader({ loading, composingText, signatureText }: LoaderProps) {
   return (
     <div className={`loader${loading ? '' : ' hidden'}`} id="loader">
       <div className="pulse" />
-      <div className="label">Composing</div>
-      <div className="sub">Quote Cloud · AI Layout</div>
+      <div className="label">{composingText}</div>
+      <div className="sub">{signatureText}</div>
     </div>
   );
 }

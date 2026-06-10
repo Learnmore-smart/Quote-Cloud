@@ -4,17 +4,25 @@ import { PaperCanvas } from './components/PaperCanvas';
 import { QuoteManager } from './components/QuoteManager';
 import { assignScatter, shuffleQuotes } from './scatter';
 import { injectPrintRule } from './print';
-import { SEED_QUOTES, FAMOUS_QUOTES } from './seed';
+import { SEED_QUOTES, FAMOUS_QUOTES, SEED_QUOTES_ZH, FAMOUS_QUOTES_ZH } from './seed';
 import { getPaperCanvasSize } from './config';
 import type { PaperKey, Orientation, Quote } from './types';
 
+import en from './locales/en.json';
+import zh from './locales/zh.json';
+
 import './styles.css';
+
+const translations = { en, zh };
 
 /** localStorage key for the persisted deck. */
 const STORAGE_KEY = 'quote-cloud-data';
 
 /** localStorage key for the persisted "show author" toggle. */
 const SHOW_AUTHOR_KEY = 'quote-cloud-show-author';
+
+/** localStorage key for the cached language. */
+const LANGUAGE_KEY = 'quote-cloud-lang';
 
 /** Load the saved "show author" toggle from localStorage (defaults to false). */
 function loadShowAuthor(): boolean {
@@ -24,6 +32,18 @@ function loadShowAuthor(): boolean {
   } catch {
     return false;
   }
+}
+
+/** Load the cached language or auto-detect browser language. */
+function loadLanguage(): 'en' | 'zh' {
+  if (typeof localStorage !== 'undefined') {
+    const cached = localStorage.getItem(LANGUAGE_KEY);
+    if (cached === 'en' || cached === 'zh') return cached as 'en' | 'zh';
+  }
+  if (typeof navigator !== 'undefined') {
+    return navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en';
+  }
+  return 'en';
 }
 
 /** A fresh random seed — used to reshuffle the deck on demand. */
@@ -42,11 +62,11 @@ function isQuote(value: unknown): value is Quote {
 }
 
 /** Load the saved deck from localStorage, falling back to the seed dataset. */
-function loadQuotes(): Quote[] {
-  if (typeof localStorage === 'undefined') return SEED_QUOTES;
+function loadQuotes(lang: 'en' | 'zh'): Quote[] {
+  if (typeof localStorage === 'undefined') return lang === 'zh' ? SEED_QUOTES_ZH : SEED_QUOTES;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return SEED_QUOTES;
+    if (!raw) return lang === 'zh' ? SEED_QUOTES_ZH : SEED_QUOTES;
     const parsed: unknown = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.every(isQuote)) {
       return parsed as Quote[];
@@ -54,7 +74,7 @@ function loadQuotes(): Quote[] {
   } catch {
     /* corrupt payload — fall through to the seed dataset */
   }
-  return SEED_QUOTES;
+  return lang === 'zh' ? SEED_QUOTES_ZH : SEED_QUOTES;
 }
 
 function computePreviewScale(
@@ -85,9 +105,11 @@ export default function App() {
   const [paper, setPaper] = useState<PaperKey>('A4');
   const [orientation, setOrientation] = useState<Orientation>('portrait');
   const [showAuthor, setShowAuthor] = useState(() => loadShowAuthor());
+  const [lang, setLang] = useState<'en' | 'zh'>(() => loadLanguage());
+
   // Open-source ready: the deck lives in state, hydrated from localStorage so
   // user edits persist across reloads.
-  const [quotes, setQuotes] = useState<Quote[]>(() => loadQuotes());
+  const [quotes, setQuotes] = useState<Quote[]>(() => loadQuotes(loadLanguage()));
   // A per-mount random seed makes the layout look different on every refresh.
   const [shuffleSeed, setShuffleSeed] = useState<number>(() => randomSeed());
   const [manageOpen, setManageOpen] = useState(false);
@@ -168,12 +190,37 @@ export default function App() {
     }
   }, [showAuthor]);
 
+  // Persist language key to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(LANGUAGE_KEY, lang);
+    } catch {
+      /* storage full or unavailable */
+    }
+  }, [lang]);
+
+  // Language translation selector
+  const t = useMemo(() => translations[lang], [lang]);
+
+  // Language switcher that updates seed quotes if the user hasn't customized the deck
+  const handleLanguageChange = useCallback((newLang: 'en' | 'zh') => {
+    setLang(newLang);
+    try {
+      const hasCustomData = localStorage.getItem(STORAGE_KEY);
+      if (!hasCustomData) {
+        setQuotes(newLang === 'zh' ? SEED_QUOTES_ZH : SEED_QUOTES);
+      }
+    } catch {
+      // fallback
+    }
+  }, []);
+
   // "I Feel Lucky" — swap in a fresh deck of famous quotes, reshuffle, close.
   const handleFeelLucky = useCallback(() => {
-    setQuotes(FAMOUS_QUOTES);
+    setQuotes(lang === 'zh' ? FAMOUS_QUOTES_ZH : FAMOUS_QUOTES);
     setShuffleSeed(randomSeed());
     setManageOpen(false);
-  }, []);
+  }, [lang]);
 
   // Append a new quote to the deck.
   const handleAddQuote = useCallback((quote: Quote) => {
@@ -204,6 +251,8 @@ export default function App() {
           items={items}
           showAuthor={showAuthor}
           loading={loading}
+          composingText={t.loader.composing}
+          signatureText={t.loader.signature}
         />
       </div>
       <ControlPanel
@@ -215,6 +264,9 @@ export default function App() {
         onShowAuthorChange={setShowAuthor}
         onManageQuotes={() => setManageOpen(true)}
         onPrint={handlePrint}
+        t={t}
+        currentLang={lang}
+        onLanguageChange={handleLanguageChange}
       />
       <QuoteManager
         open={manageOpen}
@@ -223,9 +275,14 @@ export default function App() {
         onAdd={handleAddQuote}
         onDelete={handleDeleteQuote}
         onFeelLucky={handleFeelLucky}
+        t={t}
       />
       <div className="signature">
-        Quote Cloud · <span>AI</span> Layout Engine
+        {lang === 'zh' ? (
+          <>语录云图 · <span>AI</span> 智能排版引擎</>
+        ) : (
+          <>Quote Cloud · <span>AI</span> Layout Engine</>
+        )}
       </div>
     </>
   );

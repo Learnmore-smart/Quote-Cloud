@@ -1,0 +1,44 @@
+{
+  "controlPanel": {
+    "home": "主页",
+    "github": "GitHub",
+    "title": "语录云图",
+    "subtitle": "AI 智能排版系统",
+    "paper": "纸张大小",
+    "orientation": "排版方向",
+    "showAuthor": "显示作者",
+    "showAuthorDesc": "在每条语录下方显示出处",
+    "manageQuotes": "管理语录",
+    "printPoster": "打印海报",
+    "language": "语言切换",
+    "orientations": {
+      "portrait": "纵向",
+      "landscape": "横向"
+    }
+  },
+  "quoteManager": {
+    "title": "管理语录",
+    "subtitleSingular": "{count} 条语录 · 已保存到本地",
+    "subtitlePlural": "{count} 条语录 · 已保存到本地",
+    "feelLucky": "手气不错",
+    "addQuoteLabel": "添加语录",
+    "quotePlaceholder": "输入语录内容...",
+    "authorPlaceholder": "作者",
+    "addQuoteBtn": "添加语录",
+    "currentDeckLabel": "当前语录列表",
+    "emptyState": "暂无语录，可在上方添加或点击“手气不错”加载推荐语录。",
+    "weightOptions": {
+      "auto": "自动 (交错样式)",
+      "hero": "焦点 (居中突出)",
+      "bold": "粗体",
+      "light": "细体"
+    }
+  },
+  "app": {
+    "signature": "语录云图 · AI 智能排版引擎"
+  },
+  "loader": {
+    "composing": "智能排版中",
+    "signature": "语录云图 · 自动布局"
+  }
+}
