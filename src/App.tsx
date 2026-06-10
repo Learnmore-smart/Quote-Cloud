@@ -1,14 +1,61 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ControlPanel } from './components/ControlPanel';
 import { PaperCanvas } from './components/PaperCanvas';
-import { assignScatter } from './scatter';
+import { QuoteManager } from './components/QuoteManager';
+import { assignScatter, shuffleQuotes } from './scatter';
 import { injectPrintRule } from './print';
-import { fetchWeights } from './weights';
-import { SEED_QUOTES } from './seed';
+import { SEED_QUOTES, FAMOUS_QUOTES } from './seed';
 import { getPaperCanvasSize } from './config';
 import type { PaperKey, Orientation, Quote } from './types';
 
 import './styles.css';
+
+/** localStorage key for the persisted deck. */
+const STORAGE_KEY = 'quote-cloud-data';
+
+/** localStorage key for the persisted "show author" toggle. */
+const SHOW_AUTHOR_KEY = 'quote-cloud-show-author';
+
+/** Load the saved "show author" toggle from localStorage (defaults to false). */
+function loadShowAuthor(): boolean {
+  if (typeof localStorage === 'undefined') return false;
+  try {
+    return localStorage.getItem(SHOW_AUTHOR_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+/** A fresh random seed — used to reshuffle the deck on demand. */
+function randomSeed(): number {
+  return Math.floor(Math.random() * 0x7fffffff);
+}
+
+/** A value is a usable quote if it at least carries text + author strings. */
+function isQuote(value: unknown): value is Quote {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as Quote).text === 'string' &&
+    typeof (value as Quote).author === 'string'
+  );
+}
+
+/** Load the saved deck from localStorage, falling back to the seed dataset. */
+function loadQuotes(): Quote[] {
+  if (typeof localStorage === 'undefined') return SEED_QUOTES;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return SEED_QUOTES;
+    const parsed: unknown = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.every(isQuote)) {
+      return parsed as Quote[];
+    }
+  } catch {
+    /* corrupt payload — fall through to the seed dataset */
+  }
+  return SEED_QUOTES;
+}
 
 function computePreviewScale(
   canvasW: number,
@@ -37,8 +84,13 @@ async function waitForFonts(): Promise<void> {
 export default function App() {
   const [paper, setPaper] = useState<PaperKey>('A4');
   const [orientation, setOrientation] = useState<Orientation>('portrait');
-  const [showAuthor, setShowAuthor] = useState(false);
-  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [showAuthor, setShowAuthor] = useState(() => loadShowAuthor());
+  // Open-source ready: the deck lives in state, hydrated from localStorage so
+  // user edits persist across reloads.
+  const [quotes, setQuotes] = useState<Quote[]>(() => loadQuotes());
+  // A per-mount random seed makes the layout look different on every refresh.
+  const [shuffleSeed, setShuffleSeed] = useState<number>(() => randomSeed());
+  const [manageOpen, setManageOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [viewportSize, setViewportSize] = useState({
     w: typeof window !== 'undefined' ? window.innerWidth : 1280,
@@ -69,26 +121,18 @@ export default function App() {
     [canvasSize.h, canvasSize.w, viewportSize.h, viewportSize.w],
   );
 
-  // Fetch weights — must wait for fonts to load first so the
-  // very first layout pass uses the final font metrics.
+  // Wait for fonts before the first auto-fit pass so the binary search measures
+  // final glyph widths. (Weighting is now manual via `quote.weight` + the 2D
+  // checkerboard, so there's no async ranking step anymore.)
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      // 1. Wait for fonts BEFORE measuring anything
       await waitForFonts();
       if (cancelled) return;
-      // 2. Tiny breathing room so the loading state is visible
+      // Tiny breathing room so the loading state is visible.
       await new Promise((r) => setTimeout(r, 250));
-      // 3. Fetch AI weights (or fall back to local heuristic)
-      const { data } = await fetchWeights(SEED_QUOTES);
       if (cancelled) return;
-      const sanitized = data.map((q) => {
-        const w = q.weight;
-        const safe: 1 | 2 | 3 = w === 1 || w === 2 || w === 3 ? w : 2;
-        return { ...q, weight: safe };
-      });
-      setQuotes(sanitized);
       setLoading(false);
     })();
     return () => {
@@ -96,10 +140,50 @@ export default function App() {
     };
   }, []);
 
-  // Assign semantic cloud styles (loudness, ragged widths / alignments).
-  // The actual font scaling now happens inside PaperCanvas via a measured
-  // binary-search auto-fit pass, so no estimate is needed here.
-  const items = useMemo(() => assignScatter(quotes), [quotes]);
+  // Reshuffle whenever the deck or the seed changes (stable for one seed).
+  const shuffledQuotes = useMemo(
+    () => shuffleQuotes(quotes, shuffleSeed),
+    [quotes, shuffleSeed],
+  );
+
+  // Assign semantic cloud styles. The Hero is surgically re-centred by
+  // `packRows` after the shuffle; per-cell bold/light is resolved at render.
+  const items = useMemo(() => assignScatter(shuffledQuotes), [shuffledQuotes]);
+
+  // Persist the deck to localStorage whenever it changes.
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(quotes));
+    } catch {
+      /* storage full or unavailable — keep running with in-memory state */
+    }
+  }, [quotes]);
+
+  // Persist the "show author" toggle so it survives a page refresh.
+  useEffect(() => {
+    try {
+      localStorage.setItem(SHOW_AUTHOR_KEY, String(showAuthor));
+    } catch {
+      /* storage full or unavailable — keep running with in-memory state */
+    }
+  }, [showAuthor]);
+
+  // "I Feel Lucky" — swap in a fresh deck of famous quotes, reshuffle, close.
+  const handleFeelLucky = useCallback(() => {
+    setQuotes(FAMOUS_QUOTES);
+    setShuffleSeed(randomSeed());
+    setManageOpen(false);
+  }, []);
+
+  // Append a new quote to the deck.
+  const handleAddQuote = useCallback((quote: Quote) => {
+    setQuotes((prev) => [...prev, quote]);
+  }, []);
+
+  // Remove a quote by its index in the current deck.
+  const handleDeleteQuote = useCallback((index: number) => {
+    setQuotes((prev) => prev.filter((_, i) => i !== index));
+  }, []);
 
   // Inject print rule on paper/orientation change
   useEffect(() => {
@@ -129,7 +213,16 @@ export default function App() {
         onPaperChange={setPaper}
         onOrientationChange={setOrientation}
         onShowAuthorChange={setShowAuthor}
+        onManageQuotes={() => setManageOpen(true)}
         onPrint={handlePrint}
+      />
+      <QuoteManager
+        open={manageOpen}
+        quotes={quotes}
+        onClose={() => setManageOpen(false)}
+        onAdd={handleAddQuote}
+        onDelete={handleDeleteQuote}
+        onFeelLucky={handleFeelLucky}
       />
       <div className="signature">
         Quote Cloud · <span>AI</span> Layout Engine

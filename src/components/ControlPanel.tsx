@@ -7,6 +7,7 @@ interface ControlPanelProps {
   onPaperChange: (paper: PaperKey) => void;
   onOrientationChange: (orient: Orientation) => void;
   onShowAuthorChange: (show: boolean) => void;
+  onManageQuotes: () => void;
   onPrint: () => void;
 }
 
@@ -33,6 +34,7 @@ export function ControlPanel({
   onPaperChange,
   onOrientationChange,
   onShowAuthorChange,
+  onManageQuotes,
   onPrint,
 }: ControlPanelProps) {
   return (
@@ -141,6 +143,26 @@ export function ControlPanel({
           />
         </button>
       </div>
+
+      {/* Manage Quotes */}
+      <button
+        type="button"
+        onClick={onManageQuotes}
+        className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white py-2.5 text-sm font-semibold text-neutral-800 shadow-sm transition hover:border-neutral-300 hover:bg-neutral-50 active:scale-[0.98]"
+      >
+        <svg
+          className="h-4 w-4 text-neutral-500"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M4 6h16M4 12h16M4 18h10" />
+        </svg>
+        Manage Quotes
+      </button>
 
       {/* Print */}
       <button

@@ -42,6 +42,31 @@ input {
   letter-spacing: 0;
 }
 
+/* Native <select> dropdown popup styling */
+select {
+  color-scheme: light;
+}
+
+select option {
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #262626; /* neutral-800 */
+  background-color: #ffffff;
+}
+
+select option:hover,
+select option:focus,
+select option:checked {
+  color: #ffffff;
+  background-color: #171717; /* neutral-900 */
+}
+
+/* Highlight the active option using the accent color on supporting browsers */
+select {
+  accent-color: #171717;
+}
+
 .app {
   position: fixed;
   inset: 0;
@@ -76,31 +101,51 @@ input {
 }
 
 /* ============================================================
- * Organic Quote Cloud — free-flowing, center-gravity arena.
- * The field is a single flex-wrap container pulled to the
- * vertical center. Quotes claim ragged widths and wrap with
- * natural negative space around them. A single global auto-fit
- * pass grows this container's base font until the cloud touches
- * the paper bounds — there is no per-cell search anymore.
+ * Bento Box Mosaic — rigid, hole-free tiling.
+ * The field is a vertical flex column. Each ROW flex-grows to
+ * claim its share of the height; each CELL flex-grows to claim
+ * its share of the row width. Together they tile 100% of the
+ * page with ZERO gaps. Each cell's text is grown independently
+ * by the per-cell <AutoFitQuote> gas-expansion search — there
+ * is no global `--base` anymore.
  * ============================================================ */
 .scatter-field {
   width: 100%;
   height: 100%;
   padding: 1.5rem;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   justify-content: center;
-  align-content: center;
-  align-items: center;
-  gap: 2rem;
+  gap: 0;
   overflow: hidden;
 }
 
-/* One quote in the cloud. Sized in em so the global base-font
- * auto-fit scales every block together. Ragged edges + negative
- * space are intentional. */
+/* A single full-width mosaic row of 1–3 bento boxes. */
+.quote-row {
+  display: flex;
+  width: 100%;
+  align-items: stretch;
+  gap: 0;
+  min-height: 0;
+}
+
+/* One closed box. The text inside is auto-fit to these walls. */
+.quote-cell {
+  position: relative;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Slight horizontal breathing room between neighbours; NO vertical padding
+   * so the auto-fit text can pack tightly against the row edges. */
+  padding: 0 0.5rem;
+}
+
 .quote {
   margin: 0;
+  width: 100%;
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -108,19 +153,29 @@ input {
   user-select: none;
   pointer-events: none;
   letter-spacing: 0;
-  line-height: 1.15;
   color: var(--w2-color);
-  /* Smart line-breaking: avoids lonely widows on the last line. */
-  text-wrap: pretty;
+  /* Balanced justification: balance the line lengths FIRST, THEN justify EVERY
+   * line (including the last). Balancing gives the final line enough words so
+   * the justify stretch stays subtle instead of tearing a lone word apart. */
+  text-wrap: balance;
+  text-align: justify;
+  text-align-last: justify;
+}
+
+.quote-cell-hero {
+  align-items: center;
 }
 
 .quote-hero {
   letter-spacing: -0.02em;
-  line-height: 0.95;
   color: var(--w3-color);
+  /* The Hero reads like a title/logo — centered, never justified. */
+  text-align: center;
+  text-align-last: center;
 }
 
-/* The author flows INLINE at the end of the quote string. */
+/* The author now flows INLINE at the very end of the quote paragraph, so the
+ * auto-fit engine measures the combined string with no vertical gaps. */
 .quote .author-name {
   font-style: italic;
   font-weight: 300;

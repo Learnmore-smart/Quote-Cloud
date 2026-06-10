@@ -1,44 +1,50 @@
 import type { Quote } from './types';
 
 /* =============================================================================
- * Organic Scatter Cloud — "center-gravity, ragged-edge" strategy
+ * Bento Box Mosaic — "Gas Expansion / Fit-to-Box" strategy
  * -----------------------------------------------------------------------------
- * This is NOT a rigid mosaic. There are no rows, no boxes, no forced
- * justification. Instead we emit a FLAT list of quotes with wildly contrasting,
- * asymmetric styles and let them flow into a `flex-wrap` arena that is pulled to
- * the vertical center of the paper. Negative space and ragged right/left edges
- * are FEATURES — they give the piece its airy "cloud" feeling.
+ * The page is tiled into a rigid grid of CLOSED boxes that cover 100% of the
+ * area with zero gaps/holes:
  *
- *   - Sizes are expressed in `em`, relative to a single container base font.
- *     One global auto-fit pass (in <PaperCanvas>) grows that base until the
- *     whole cloud organically touches the bounds of the paper.
- *   - The Hero ("Building LearnX itself…", by Yu He Wang) is the loud,
- *     near-full-width manifesto. It is spliced into the MIDDLE of the array so
- *     it naturally renders at the cloud's center of gravity.
- *   - Everyone else is split into LOUD (~20%) and WHISPER (~80%) quotes with
- *     contrasting sizes, widths, weights and ragged alignments.
+ *   - The paper is a vertical flex column. Each ROW gets a random vertical
+ *     `flex` weight so the rows divide the height unevenly but COMPLETELY.
+ *   - Each row is a horizontal flex line. The per-cell horizontal `flex` (and
+ *     the bold/light styling) is decided at RENDER time by a 2D checkerboard so
+ *     no two adjacent boxes — horizontally OR vertically — ever clash.
+ *   - The Hero is planted in the MIDDLE row with a big vertical weight and a
+ *     solo (full-width) cell, so it always commands a huge box.
  *
- * Everything is deterministic per index so the layout stays stable across
- * re-renders.
+ * The font size is NOT decided here. Each cell renders an `<AutoFitQuote>` that
+ * runs its OWN binary search to grow the text like a gas until it perfectly
+ * hits the walls of its bounding box. So this module only decides GEOMETRY
+ * (which quotes share a row, the hero placement) and the per-quote casing.
  * ========================================================================== */
 
 export interface ScatterItem {
   quote: Quote;
-  /** The one giant manifesto quote, planted at the cloud's center. */
+  /** The one giant manifesto quote. */
   isHero: boolean;
-  /** Font size in `em`, relative to the container's auto-fit base font. */
-  fontEm: number;
-  /** Track width as a percentage string of the arena, e.g. '60%'. */
-  width: string;
-  /** Ragged alignment for an organic, jagged cloud edge. */
-  align: 'left' | 'center' | 'right';
-  /** Volume = weight: louder quotes are heavier. */
+  /** Base font weight. Overridden per-cell by the checkerboard at render. */
   fontWeight: number;
-  /** Force UPPERCASE rendering (Hero only). */
+  /** Base line-height. Overridden per-cell by the checkerboard at render. */
+  lineHeight: number;
+  /** Force UPPERCASE rendering (used by the Hero manifesto row). */
   uppercase: boolean;
 }
 
-/** Deterministic PRNG so the poster stays stable across re-renders. */
+/** A single closed box in the mosaic. */
+export interface QuoteCell {
+  item: ScatterItem;
+}
+
+/** A horizontal row of boxes that fills 100% of the cloud width. */
+export interface QuoteRow {
+  cells: QuoteCell[];
+  /** Vertical flex-grow weight of this row inside the column. */
+  flex: number;
+}
+
+/** Deterministic PRNG so a given seed always yields the same poster. */
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
@@ -50,86 +56,138 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-/** Linear interpolation between `lo` and `hi` by `t` (0..1). */
-function lerp(lo: number, hi: number, t: number): number {
-  return lo + (hi - lo) * t;
-}
-
-/** A percentage-width string sampled from the [lo, hi] range. */
-function pct(lo: number, hi: number, t: number): string {
-  return `${Math.round(lerp(lo, hi, t))}%`;
-}
-
-const ALIGNS = ['left', 'center', 'right'] as const;
+/** Random vertical row weights — the rows divide the page height unevenly. */
+const ROW_FLEXES = [1, 1.4, 1.8, 2.2] as const;
 
 /**
- * Turn raw quotes into an organic cloud of contrasting styles.
- *
- *   1. Pull the Hero ("Yu He Wang") out of the stream.
- *   2. Map everyone else to LOUD (~20%) or WHISPER (~80%) styles with
- *      contrasting sizes / widths / weights and a ragged alignment.
- *   3. `splice` the Hero into the MIDDLE so it lands at the center of gravity.
- *
- * The actual font SCALE is decided later, once, for the whole container by the
- * global auto-fit pass in <PaperCanvas>.
+ * Seeded Fisher–Yates shuffle. A fresh `seed` (random per mount, or bumped by
+ * the "I Feel Lucky" button) reshuffles the deck so the poster looks different
+ * every time it loads, while staying stable across re-renders for one seed.
+ */
+export function shuffleQuotes(quotes: Quote[], seed: number): Quote[] {
+  const rnd = mulberry32(seed * 2654435761 + 101);
+  const out = [...quotes];
+  for (let i = out.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rnd() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+/**
+ * Turn raw quotes into styled cloud items. Exactly one quote becomes the Hero:
+ * the first with `weight: 'hero'`, else the "Yu He Wang" manifesto, else the
+ * first quote. Everyone else is left at neutral defaults — their bold/light
+ * styling is resolved per-cell at render time by the 2D checkerboard.
  */
 export function assignScatter(quotes: Quote[]): ScatterItem[] {
   if (quotes.length === 0) return [];
 
-  // The manifesto Hero is the "Yu He Wang" quote; fall back to index 0.
   const heroIdx = (() => {
+    const byWeight = quotes.findIndex((q) => q.weight === 'hero');
+    if (byWeight >= 0) return byWeight;
     const byAuthor = quotes.findIndex((q) => q.author === 'Yu He Wang');
     return byAuthor >= 0 ? byAuthor : 0;
   })();
 
-  const heroQuote = quotes[heroIdx];
-  const rest = quotes.filter((_, idx) => idx !== heroIdx);
-
-  // --- The crowd: extreme, asymmetric contrast -------------------------
-  const items: ScatterItem[] = rest.map((quote, index) => {
-    const rnd = mulberry32(index * 2654435761 + 11);
-    const align = ALIGNS[Math.floor(rnd() * ALIGNS.length)];
-
-    // ~20% of quotes shout; the other ~80% whisper.
-    const isLoud = rnd() < 0.2;
-
-    if (isLoud) {
+  return quotes.map((quote, index) => {
+    // --- Hero: the loud, full-width manifesto headline -------------------
+    if (index === heroIdx) {
       return {
         quote,
-        isHero: false,
-        fontEm: lerp(1.8, 2.2, rnd()), // 1.8em – 2.2em
-        width: pct(50, 70, rnd()), // 50% – 70%
-        align,
-        fontWeight: 700, // font-bold
-        uppercase: false,
+        isHero: true,
+        fontWeight: 900,
+        lineHeight: 0.9,
+        uppercase: true,
       };
     }
 
+    // --- Everyone else: neutral defaults; the checkerboard owns the look.
     return {
       quote,
       isHero: false,
-      fontEm: lerp(0.85, 1.1, rnd()), // 0.85em – 1.1em
-      width: pct(30, 45, rnd()), // 30% – 45%
-      align,
-      fontWeight: rnd() < 0.5 ? 300 : 400, // font-light or font-normal
+      fontWeight: 400,
+      lineHeight: 1.1,
       uppercase: false,
     };
   });
+}
 
-  // --- The Hero: the loud, near-full-width manifesto -------------------
-  const hero: ScatterItem = {
-    quote: heroQuote,
-    isHero: true,
-    fontEm: 3.5, // 3.5em — by far the largest
-    width: '90%', // 80% – 100% band
-    align: 'center',
-    fontWeight: 900, // font-black
-    uppercase: true,
+/** Build ONE mosaic row out of a group of 1–3 quotes. */
+function buildRow(group: ScatterItem[], seed: number): QuoteRow {
+  const rnd = mulberry32(seed * 2654435761 + 17);
+  return {
+    cells: group.map((item) => ({ item })),
+    flex: ROW_FLEXES[Math.floor(rnd() * ROW_FLEXES.length)],
   };
+}
 
-  // 3. Drop the Hero into the exact middle so it reads at the cloud's center.
-  const middle = Math.floor(items.length / 2);
-  items.splice(middle, 0, hero);
+/**
+ * Pack the flat item list into explicit full-width / full-height mosaic rows
+ * with the Hero planted dead-center.
+ *
+ *   1. Pull the Hero out of the stream entirely.
+ *   2. Chunk every OTHER quote into rows of 2 or 3 (we only ever emit a
+ *      1-quote row when it's mathematically forced at the very end).
+ *   3. Give each row a random vertical flex weight (see `buildRow`).
+ *   4. `splice` the Hero (a tall, full-width solo row) into the MIDDLE.
+ *
+ * Because every row flex-grows to share the height and every cell flex-grows to
+ * share the width, the page is guaranteed to be tiled with zero holes.
+ */
+export function packRows(items: ScatterItem[]): QuoteRow[] {
+  if (items.length === 0) return [];
 
-  return items;
+  // 1. Extract the Hero; everyone else flows into the mosaic.
+  const heroIndex = items.findIndex((it) => it.isHero);
+  const heroSourceIndex = heroIndex >= 0 ? heroIndex : 0;
+  const hero = items[heroSourceIndex];
+  const rest = items.filter((_, idx) => idx !== heroSourceIndex);
+
+  const rows: QuoteRow[] = [];
+
+  // 2 + 3. Chunk the non-hero quotes into rows of 2 or 3.
+  let i = 0;
+  let chunk = 0;
+  while (i < rest.length) {
+    const remaining = rest.length - i;
+    let groupSize: number;
+
+    if (remaining === 1) {
+      groupSize = 1; // forced leftover — the ONLY way a 1-row appears
+    } else if (remaining === 2) {
+      groupSize = 2;
+    } else if (remaining === 3) {
+      groupSize = 3; // taking 2 would orphan a lonely 1
+    } else if (remaining === 4) {
+      groupSize = 2; // 2 + 2 beats 3 + 1 (no orphan)
+    } else {
+      // 5+ remaining: free to roll 2 or 3 — both leave a safe remainder.
+      groupSize = mulberry32(chunk * 2654435761 + 7)() > 0.5 ? 3 : 2;
+    }
+
+    rows.push(buildRow(rest.slice(i, i + groupSize), chunk));
+    i += groupSize;
+    chunk += 1;
+  }
+
+  // 4. Drop the Hero into the exact middle as a tall, full-width solo row.
+  const heroRow: QuoteRow = {
+    flex: 3.2, // dominant vertical share — the largest of any row
+    cells: [
+      {
+        item: {
+          ...hero,
+          isHero: true,
+          fontWeight: 900,
+          lineHeight: 0.9,
+          uppercase: true,
+        },
+      },
+    ],
+  };
+  const middle = Math.floor(rows.length / 2);
+  rows.splice(middle, 0, heroRow);
+
+  return rows;
 }

@@ -4,8 +4,14 @@
 export interface Quote {
   author: string;
   text: string;
-  /** 1 = light, 2 = medium, 3 = heavy. Defaults to 2 if unset. */
-  weight?: 1 | 2 | 3;
+  /**
+   * Optional manual styling override.
+   *   - 'hero'  → the one exclusive massive, heavy, centered headline.
+   *   - 'bold'  → black weight, claims a larger box.
+   *   - 'light' → light weight, claims a smaller box.
+   *   - 'auto' / undefined → fall back to the 2D checkerboard contrast logic.
+   */
+  weight?: 'auto' | 'bold' | 'light' | 'hero';
 }
 
 /** A quote that has been positioned on the paper.

@@ -1,7 +1,8 @@
-import { useLayoutEffect, useRef } from 'react';
+import { useMemo } from 'react';
 import type { CSSProperties } from 'react';
-import { QuoteBlock } from './QuoteBlock';
+import { AutoFitQuote } from './AutoFitQuote';
 import { Loader } from './Loader';
+import { packRows } from '../scatter';
 import type { ScatterItem } from '../scatter';
 
 interface PaperCanvasProps {
@@ -13,21 +14,14 @@ interface PaperCanvasProps {
 }
 
 /* =============================================================================
- * Organic Quote Cloud Canvas
+ * Bento Box Mosaic Canvas
  * -----------------------------------------------------------------------------
- * The paper is a single free-flowing `flex-wrap` arena, pulled to the vertical
- * center (`align-content: center`). There is NO row packing and NO per-cell
- * search. Every <QuoteBlock> sizes itself in `em`, and ONE global auto-fit pass
- * here grows the arena's base font until the whole cloud organically touches
- * the widest or tallest bound of the paper.
+ * The paper is a rigid, hole-free mosaic. `packRows` tiles the quotes into rows
+ * (random vertical flex) and cells (random horizontal flex) that together cover
+ * 100% of the page. There is NO global font search anymore — each cell renders
+ * an `<AutoFitQuote>` that grows its own text like a gas until it hits the walls
+ * of its bounding box.
  * ========================================================================== */
-
-/** Smallest base font we will ever try (px, virtual canvas space). */
-const MIN_BASE = 4;
-/** Largest base font we will ever try (px, virtual canvas space). */
-const MAX_BASE = 160;
-/** Stop the search once the window is tighter than this (px). */
-const PRECISION = 0.4;
 
 export function PaperCanvas({
   canvasSize,
@@ -36,58 +30,8 @@ export function PaperCanvas({
   showAuthor,
   loading,
 }: PaperCanvasProps) {
-  const fieldRef = useRef<HTMLDivElement>(null);
-
-  // Single global auto-fit: grow the container base font until the cloud
-  // touches the paper bounds (vertically or horizontally), whichever first.
-  useLayoutEffect(() => {
-    const field = fieldRef.current;
-    if (!field) return;
-
-    const fit = () => {
-      const maxH = field.clientHeight;
-      const maxW = field.clientWidth;
-      if (maxH <= 0 || maxW <= 0) return;
-
-      // While probing, stack content from the top so `scrollHeight` reports the
-      // TRUE total content height. With `align-content: center`, symmetric
-      // overflow is clipped at the top and would otherwise be under-measured.
-      const prevAlignContent = field.style.alignContent;
-      field.style.alignContent = 'flex-start';
-
-      // Apply a candidate base font and force a synchronous reflow + measure.
-      const fitsAt = (size: number): boolean => {
-        field.style.fontSize = `${size}px`;
-        // Reading scroll* forces layout, so each probe measures fresh values.
-        return field.scrollHeight <= maxH && field.scrollWidth <= maxW;
-      };
-
-      let min = MIN_BASE;
-      let max = MAX_BASE;
-      let best = MIN_BASE;
-
-      while (max - min > PRECISION) {
-        const mid = (min + max) / 2;
-        if (fitsAt(mid)) {
-          best = mid;
-          min = mid;
-        } else {
-          max = mid;
-        }
-      }
-
-      field.style.fontSize = `${best}px`;
-      // Restore center-gravity so the settled cloud sits in the vertical middle.
-      field.style.alignContent = prevAlignContent;
-    };
-
-    fit();
-
-    // Re-grow the cloud whenever the paper / orientation / panel reflows.
-    const observer = new ResizeObserver(() => fit());
-    observer.observe(field);
-    return () => observer.disconnect();
-  }, [items, showAuthor]);
+  // Tile the flat quote list into the rigid full-bleed mosaic.
+  const rows = useMemo(() => packRows(items), [items]);
 
   const canvasStyle: CSSProperties = {
     width: `${canvasSize.w}px`,
@@ -104,14 +48,61 @@ export function PaperCanvas({
           height: `${canvasSize.h * previewScale}px`,
         }}
       >
-        <div className="paper-canvas" id="paperCanvas" style={canvasStyle}>
-          <div className="scatter-field" ref={fieldRef}>
-            {items.map((item, index) => (
-              <QuoteBlock
-                key={`${item.quote.author}-${index}`}
-                item={item}
-                showAuthor={showAuthor}
-              />
+        <div
+          className="paper-canvas"
+          id="paperCanvas"
+          style={canvasStyle}
+        >
+          <div className="scatter-field">
+            {rows.map((row, rowIndex) => (
+              <div
+                className="quote-row"
+                key={`row-${rowIndex}`}
+                style={{ flexGrow: row.flex, flexShrink: 1, flexBasis: 0 }}
+              >
+                {row.cells.map((cell, cellIndex) => {
+                  // --- 2D checkerboard contrast --------------------------
+                  // Bold must ONLY ever touch light, both horizontally and
+                  // vertically. A manual `quote.weight` ('bold' | 'light')
+                  // wins; otherwise parity of (rowIndex + cellIndex) decides.
+                  // The Hero ignores all of this and keeps its exclusive look.
+                  const { item } = cell;
+                  const manual = item.quote.weight;
+                  const isBold = item.isHero
+                    ? true
+                    : manual === 'bold' || manual === 'hero'
+                      ? true
+                      : manual === 'light'
+                        ? false
+                        : (rowIndex + cellIndex) % 2 === 0;
+
+                  // A bold box claims 2× the width of a light box; since the
+                  // text auto-fits its box, the bold quote renders far larger.
+                  const flex = item.isHero ? 1 : isBold ? 2 : 1;
+
+                  // Elastic line-height: line-height is the vertical spring
+                  // that lets blocks of wildly different size/weight sit flush.
+                  // A bold box compresses to a dense brick (0.95); a light box
+                  // expands airily (1.6) so its small text stretches to fill
+                  // the cell height of its heavy neighbours.
+                  const resolvedItem: ScatterItem = item.isHero
+                    ? item
+                    : {
+                        ...item,
+                        fontWeight: isBold ? 900 : 300,
+                        lineHeight: isBold ? 0.95 : 1.6,
+                      };
+
+                  return (
+                    <AutoFitQuote
+                      key={`${item.quote.author}-${rowIndex}-${cellIndex}`}
+                      item={resolvedItem}
+                      flex={flex}
+                      showAuthor={showAuthor}
+                    />
+                  );
+                })}
+              </div>
             ))}
           </div>
           <Loader loading={loading} />
