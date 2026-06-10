@@ -13,6 +13,19 @@ import './styles.css';
 /** localStorage key for the persisted deck. */
 const STORAGE_KEY = 'quote-cloud-data';
 
+/** localStorage key for the persisted "show author" toggle. */
+const SHOW_AUTHOR_KEY = 'quote-cloud-show-author';
+
+/** Load the saved "show author" toggle from localStorage (defaults to false). */
+function loadShowAuthor(): boolean {
+  if (typeof localStorage === 'undefined') return false;
+  try {
+    return localStorage.getItem(SHOW_AUTHOR_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
 /** A fresh random seed — used to reshuffle the deck on demand. */
 function randomSeed(): number {
   return Math.floor(Math.random() * 0x7fffffff);
@@ -71,7 +84,7 @@ async function waitForFonts(): Promise<void> {
 export default function App() {
   const [paper, setPaper] = useState<PaperKey>('A4');
   const [orientation, setOrientation] = useState<Orientation>('portrait');
-  const [showAuthor, setShowAuthor] = useState(false);
+  const [showAuthor, setShowAuthor] = useState(() => loadShowAuthor());
   // Open-source ready: the deck lives in state, hydrated from localStorage so
   // user edits persist across reloads.
   const [quotes, setQuotes] = useState<Quote[]>(() => loadQuotes());
@@ -145,6 +158,15 @@ export default function App() {
       /* storage full or unavailable — keep running with in-memory state */
     }
   }, [quotes]);
+
+  // Persist the "show author" toggle so it survives a page refresh.
+  useEffect(() => {
+    try {
+      localStorage.setItem(SHOW_AUTHOR_KEY, String(showAuthor));
+    } catch {
+      /* storage full or unavailable — keep running with in-memory state */
+    }
+  }, [showAuthor]);
 
   // "I Feel Lucky" — swap in a fresh deck of famous quotes, reshuffle, close.
   const handleFeelLucky = useCallback(() => {
