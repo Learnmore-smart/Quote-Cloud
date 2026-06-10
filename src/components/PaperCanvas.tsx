@@ -85,11 +85,7 @@ export function PaperCanvas({
                     : {
                         ...item,
                         fontWeight: isBold ? 900 : 300,
-                        // Elastic line-height as a vertical constraint: the
-                        // heavy brick compresses to a dense block (0.95) while
-                        // the airy block expands (1.6) so its small text still
-                        // fills the cell height flush with its heavy neighbour.
-                        lineHeight: isBold ? 0.95 : 1.6,
+                        lineHeight: isBold ? 1.05 : 1.1,
                       };
 
                   return (
