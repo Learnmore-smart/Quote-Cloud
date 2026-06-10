@@ -37,8 +37,10 @@ export interface PlacedQuote {
 
 export type PaperKey = 'A3' | 'A4' | 'A5' | 'Letter' | 'Legal';
 export type Orientation = 'portrait' | 'landscape';
+export type PosterTheme = string;
 
 export interface PaperSize {
   w: number;
   h: number;
 }
+

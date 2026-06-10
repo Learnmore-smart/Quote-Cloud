@@ -1,0 +1,923 @@
+/* ============================================================
+ * Unified Theme Style System (theme.css)
+ * ============================================================ */
+
+/* ============================================================
+ * Modal Theme Variables
+ * ============================================================ */
+
+.workspace.mode-dark {
+  --modal-bg: rgba(12, 15, 25, 0.95);
+  --modal-border: rgba(255, 255, 255, 0.1);
+  --modal-text: #ffffff;
+  --modal-text-muted: #9ca3af;
+  --modal-panel-bg: rgba(0, 0, 0, 0.25);
+  --modal-panel-border: rgba(255, 255, 255, 0.05);
+  
+  --modal-close-bg: rgba(255, 255, 255, 0.05);
+  --modal-close-border: rgba(255, 255, 255, 0.05);
+  --modal-close-text: #a3a3a3;
+  --modal-close-hover-bg: rgba(255, 255, 255, 0.1);
+  --modal-close-hover-text: #ffffff;
+
+  --modal-card-bg: rgba(0, 0, 0, 0.3);
+  --modal-card-border: rgba(255, 255, 255, 0.05);
+  --modal-card-text: #d1d5db;
+  --modal-card-hover-bg: rgba(38, 38, 38, 0.4);
+  --modal-card-hover-text: #ffffff;
+  --modal-card-active-bg: rgba(38, 38, 38, 0.8);
+  --modal-card-active-border: rgba(var(--accent-color-rgb), 0.5);
+
+  --modal-toggle-wrapper-bg: rgba(0, 0, 0, 0.4);
+  --modal-toggle-wrapper-border: rgba(255, 255, 255, 0.05);
+  --modal-toggle-active-bg: rgba(38, 38, 38, 1);
+  --modal-toggle-active-text: #ffffff;
+  --modal-toggle-active-border: rgba(255, 255, 255, 0.05);
+  --modal-toggle-inactive-text: #a3a3a3;
+  --modal-toggle-inactive-hover-bg: rgba(255, 255, 255, 0.05);
+  --modal-toggle-inactive-hover-text: #e5e7eb;
+
+  --modal-input-bg: rgba(0, 0, 0, 0.4);
+  --modal-input-border: rgba(255, 255, 255, 0.05);
+  --modal-input-focus-border: rgba(var(--accent-color-rgb), 0.5);
+  --modal-input-text: #d1d5db;
+  --modal-input-hover-bg: rgba(0, 0, 0, 0.6);
+  --modal-input-hover-text: #ffffff;
+  
+  --modal-select-option-bg: #121520;
+  
+  --modal-row-bg: rgba(0, 0, 0, 0.2);
+  --modal-row-border: rgba(255, 255, 255, 0.05);
+  --modal-row-label: #d1d5db;
+
+  --modal-btn-bg: rgba(255, 255, 255, 0.05);
+  --modal-btn-border: rgba(255, 255, 255, 0.1);
+  --modal-btn-text: #d1d5db;
+  --modal-btn-hover-bg: rgba(255, 255, 255, 0.1);
+  --modal-btn-hover-text: #ffffff;
+
+  --modal-scroll-thumb: rgba(255, 255, 255, 0.15);
+  --modal-scroll-thumb-hover: rgba(255, 255, 255, 0.3);
+  --modal-scroll-track: rgba(0, 0, 0, 0.2);
+}
+
+.workspace.mode-light {
+  --modal-bg: #f9fafb;
+  --modal-border: rgba(0, 0, 0, 0.08);
+  --modal-text: #111827;
+  --modal-text-muted: #4b5563;
+  --modal-panel-bg: #f3f4f6;
+  --modal-panel-border: rgba(0, 0, 0, 0.04);
+  
+  --modal-close-bg: rgba(0, 0, 0, 0.04);
+  --modal-close-border: rgba(0, 0, 0, 0.04);
+  --modal-close-text: #4b5563;
+  --modal-close-hover-bg: rgba(0, 0, 0, 0.08);
+  --modal-close-hover-text: #111827;
+
+  --modal-card-bg: #ffffff;
+  --modal-card-border: rgba(0, 0, 0, 0.08);
+  --modal-card-text: #374151;
+  --modal-card-hover-bg: #f3f4f6;
+  --modal-card-hover-text: #111827;
+  --modal-card-active-bg: #ffffff;
+  --modal-card-active-border: rgba(var(--accent-color-rgb), 0.6);
+
+  --modal-toggle-wrapper-bg: rgba(0, 0, 0, 0.04);
+  --modal-toggle-wrapper-border: rgba(0, 0, 0, 0.04);
+  --modal-toggle-active-bg: #ffffff;
+  --modal-toggle-active-text: #111827;
+  --modal-toggle-active-border: rgba(0, 0, 0, 0.08);
+  --modal-toggle-inactive-text: #4b5563;
+  --modal-toggle-inactive-hover-bg: rgba(0, 0, 0, 0.03);
+  --modal-toggle-inactive-hover-text: #111827;
+
+  --modal-input-bg: #ffffff;
+  --modal-input-border: rgba(0, 0, 0, 0.08);
+  --modal-input-focus-border: rgba(var(--accent-color-rgb), 0.5);
+  --modal-input-text: #374151;
+  --modal-input-hover-bg: #f9fafb;
+  --modal-input-hover-text: #111827;
+  
+  --modal-select-option-bg: #ffffff;
+  
+  --modal-row-bg: #ffffff;
+  --modal-row-border: rgba(0, 0, 0, 0.06);
+  --modal-row-label: #374151;
+
+  --modal-btn-bg: #ffffff;
+  --modal-btn-border: rgba(0, 0, 0, 0.08);
+  --modal-btn-text: #374151;
+  --modal-btn-hover-bg: #f3f4f6;
+  --modal-btn-hover-text: #111827;
+
+  --modal-scroll-thumb: rgba(0, 0, 0, 0.15);
+  --modal-scroll-thumb-hover: rgba(0, 0, 0, 0.25);
+  --modal-scroll-track: rgba(0, 0, 0, 0.05);
+}
+
+/* ============================================================
+ * 1. Workspace Header & Footer Adapters
+ * ============================================================ */
+
+.workspace.mode-light .workspace-header .logo {
+  color: #111827 !important;
+}
+
+.workspace.mode-light .logo-sub {
+  color: rgba(0, 0, 0, 0.45) !important;
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+.workspace.mode-light .header-lang-switcher {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+.workspace.mode-light .workspace-footer {
+  border-top-color: rgba(0, 0, 0, 0.05) !important;
+  background: linear-gradient(to top, rgba(234, 231, 223, 0.9) 0%, rgba(234, 231, 223, 0) 100%) !important;
+  color: rgba(0, 0, 0, 0.45) !important;
+}
+
+.workspace.mode-light .workspace-footer .signature span {
+  color: rgba(0, 0, 0, 0.75) !important;
+}
+
+.workspace.mode-light .footer-info .separator {
+  color: rgba(0, 0, 0, 0.15) !important;
+}
+
+/* ============================================================
+ * 2. Control Panel (Sidebar) Theme Classes
+ * ============================================================ */
+
+.controls {
+  background: var(--glass-bg) !important;
+  border-color: var(--glass-border) !important;
+  color: var(--glass-text) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12) !important;
+  transition: all 0.3s ease;
+}
+
+.workspace.mode-dark .controls {
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Sidebar grid segments switcher wrapper */
+.controls-switch-grid {
+  background-color: var(--glass-input-bg) !important;
+  border-color: var(--glass-input-border) !important;
+  transition: all 0.3s ease;
+}
+
+/* Sidebar segmented buttons */
+.controls-switch-btn {
+  color: var(--glass-text-muted) !important;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.controls-switch-btn:hover {
+  color: var(--glass-text) !important;
+  background-color: var(--glass-item-hover) !important;
+}
+
+.controls-switch-btn.active {
+  color: var(--glass-text) !important;
+  background-color: var(--glass-bg) !important;
+  border-color: var(--glass-border) !important;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Theme trigger button */
+.controls-theme-btn {
+  background-color: var(--glass-item-bg) !important;
+  border-color: var(--glass-item-border) !important;
+  color: var(--glass-text) !important;
+  transition: all 0.2s ease;
+}
+
+.controls-theme-btn:hover {
+  background-color: var(--glass-item-hover) !important;
+}
+
+.controls-theme-btn .theme-icon-wrapper {
+  background-color: var(--glass-input-bg) !important;
+  border-color: var(--glass-input-border) !important;
+}
+
+/* Row card item wrappers */
+.controls-row-wrapper {
+  background-color: var(--glass-item-bg) !important;
+  border-color: var(--glass-item-border) !important;
+}
+
+/* Slider input element */
+.controls-slider {
+  background-color: var(--glass-input-bg) !important;
+  border-color: var(--glass-input-border) !important;
+}
+
+/* Standard sidebar action buttons */
+.controls-action-btn {
+  background-color: var(--glass-item-bg) !important;
+  border-color: var(--glass-item-border) !important;
+  color: var(--glass-text) !important;
+  transition: all 0.2s ease;
+}
+
+.controls-action-btn:hover {
+  background-color: var(--glass-item-hover) !important;
+  color: var(--glass-text) !important;
+}
+
+.controls a {
+  color: var(--glass-text-muted) !important;
+  transition: color 0.2s ease;
+}
+
+.controls a:hover {
+  color: var(--glass-text) !important;
+}
+
+/* ============================================================
+ * 3. CustomSelect Dropdown Theme Classes
+ * ============================================================ */
+
+.custom-select-trigger {
+  background-color: var(--glass-input-bg) !important;
+  border-color: var(--glass-input-border) !important;
+  color: var(--glass-text) !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.2s ease;
+}
+
+.custom-select-trigger:hover {
+  background-color: var(--glass-input-hover) !important;
+}
+
+.custom-select-trigger span {
+  color: var(--glass-text) !important;
+}
+
+.custom-select-options {
+  background-color: var(--glass-bg) !important;
+  border-color: var(--glass-border) !important;
+  color: var(--glass-text) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
+  transition: all 0.2s ease;
+}
+
+.workspace.mode-dark .custom-select-options {
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5) !important;
+}
+
+.custom-select-option {
+  color: var(--glass-text-muted) !important;
+  transition: all 0.2s ease;
+}
+
+.custom-select-option:hover {
+  background-color: var(--glass-item-hover) !important;
+  color: var(--glass-text) !important;
+}
+
+.custom-select-option span {
+  color: var(--glass-text) !important;
+}
+
+.custom-select-option.selected {
+  background-color: rgba(var(--accent-color-rgb), 0.1) !important;
+  color: var(--accent-color) !important;
+  border-color: rgba(var(--accent-color-rgb), 0.2) !important;
+}
+
+.custom-select-option.selected span {
+  color: var(--accent-color) !important;
+}
+
+/* ============================================================
+ * 4. Quote Manager Drawer & Modal Theme Classes
+ * ============================================================ */
+
+.theme-drawer-window {
+  background-color: #0c0e17 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: var(--glass-text) !important;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.25) !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.workspace.mode-dark .theme-drawer-window {
+  box-shadow: -20px 0 60px rgba(0, 0, 0, 0.6) !important;
+}
+
+.theme-modal-backdrop {
+  background-color: rgba(3, 7, 18, 0.35) !important;
+  backdrop-filter: blur(8px);
+}
+
+.workspace.mode-light .theme-modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Quote list card item in QuoteManager */
+.quote-manager-card {
+  background-color: var(--glass-item-bg) !important;
+  border-color: var(--glass-item-border) !important;
+  color: var(--glass-text) !important;
+  transition: all 0.2s ease;
+}
+
+.quote-manager-card:hover {
+  background-color: var(--glass-item-hover) !important;
+  border-color: var(--glass-border) !important;
+}
+
+.quote-manager-card p {
+  color: var(--glass-text) !important;
+}
+
+.quote-manager-card span {
+  color: var(--glass-text-muted) !important;
+}
+
+.quote-manager-card.editing {
+  background-color: rgba(139, 92, 246, 0.05) !important;
+  border-color: rgba(139, 92, 246, 0.3) !important;
+}
+
+.workspace.mode-light .quote-manager-card.editing {
+  background-color: rgba(139, 92, 246, 0.02) !important;
+}
+
+/* ============================================================
+ * 5. ThemeModal Window & Element Classes
+ * ============================================================ */
+
+.theme-modal-window {
+  background-color: var(--modal-bg);
+  border-color: var(--modal-border) !important;
+  color: var(--modal-text);
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+.theme-modal-border-light {
+  border-color: var(--modal-panel-border) !important;
+  transition: border-color 0.3s ease;
+}
+
+.theme-modal-close-btn {
+  background-color: var(--modal-close-bg);
+  border-color: var(--modal-close-border);
+  color: var(--modal-close-text);
+  transition: all 0.2s ease;
+}
+
+.theme-modal-close-btn:hover {
+  background-color: var(--modal-close-hover-bg);
+  color: var(--modal-close-hover-text);
+}
+
+.theme-modal-text-title {
+  color: var(--modal-text) !important;
+  transition: color 0.3s ease;
+}
+
+.theme-modal-text-muted {
+  color: var(--modal-text-muted) !important;
+  transition: color 0.3s ease;
+}
+
+.theme-modal-text-section {
+  color: var(--modal-text-muted) !important;
+  transition: color 0.3s ease;
+}
+
+.theme-modal-left-panel {
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: var(--modal-panel-border);
+  transition: border-color 0.3s ease;
+}
+
+@media (min-width: 768px) {
+  .theme-modal-left-panel {
+    border-bottom-width: 0px;
+    border-right-width: 1px;
+    border-right-style: solid;
+    border-right-color: var(--modal-panel-border);
+  }
+}
+
+.theme-modal-card {
+  background-color: var(--modal-card-bg);
+  border-color: var(--modal-card-border);
+  color: var(--modal-card-text);
+  transition: all 0.2s ease;
+}
+
+.theme-modal-card:hover {
+  background-color: var(--modal-card-hover-bg);
+  color: var(--modal-card-hover-text);
+}
+
+.theme-modal-card.active {
+  background-color: var(--modal-card-active-bg) !important;
+  border-color: var(--modal-card-active-border) !important;
+  color: var(--modal-text) !important;
+}
+
+.theme-modal-preview-pill-border {
+  border-color: var(--modal-panel-border) !important;
+  transition: border-color 0.3s ease;
+}
+
+.theme-modal-preview-inner-border {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.workspace.mode-light .theme-modal-preview-inner-border {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.theme-modal-right-panel {
+  background-color: var(--modal-panel-bg) !important;
+  border-color: var(--modal-panel-border) !important;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.theme-modal-toggle-wrapper {
+  background-color: var(--modal-toggle-wrapper-bg);
+  border-color: var(--modal-toggle-wrapper-border);
+  transition: all 0.3s ease;
+}
+
+.theme-modal-toggle-btn {
+  color: var(--modal-toggle-inactive-text);
+  transition: all 0.2s ease;
+}
+
+.theme-modal-toggle-btn:hover {
+  color: var(--modal-toggle-inactive-hover-text);
+  background-color: var(--modal-toggle-inactive-hover-bg);
+}
+
+.theme-modal-toggle-btn.active {
+  background-color: var(--modal-toggle-active-bg) !important;
+  border-color: var(--modal-toggle-active-border) !important;
+  color: var(--modal-toggle-active-text) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Slider Switcher (Premium Sliding Segmented Control) */
+.slider-switcher {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 3px;
+  border-radius: 12px;
+  background-color: var(--modal-toggle-wrapper-bg);
+  border: 1px solid var(--modal-toggle-wrapper-border);
+  transition: all 0.3s ease;
+  z-index: 1;
+  width: 100%;
+}
+
+.slider-switcher .slider-indicator {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  border-radius: 9px;
+  background-color: var(--modal-toggle-active-bg) !important;
+  border: 1px solid var(--modal-toggle-active-border) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.slider-switcher.active-right .slider-indicator {
+  transform: translateX(100%);
+}
+
+.slider-switcher .slider-btn {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--modal-toggle-inactive-text) !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.slider-switcher .slider-btn.active {
+  color: var(--modal-toggle-active-text) !important;
+}
+
+.slider-switcher .slider-btn:hover:not(.active) {
+  color: var(--modal-toggle-inactive-hover-text) !important;
+}
+
+.theme-modal-select {
+  border-color: var(--modal-input-border) !important;
+  background-color: var(--modal-input-bg) !important;
+  color: var(--modal-input-text) !important;
+  transition: all 0.2s ease;
+}
+
+.theme-modal-select:hover {
+  background-color: var(--modal-input-hover-bg) !important;
+  color: var(--modal-text) !important;
+}
+
+.theme-modal-select:focus {
+  border-color: var(--modal-input-focus-border) !important;
+}
+
+.theme-modal-select-option {
+  background-color: var(--modal-select-option-bg) !important;
+  color: var(--modal-text) !important;
+}
+
+.theme-modal-row-wrapper {
+  background-color: var(--modal-row-bg) !important;
+  border-color: var(--modal-row-border) !important;
+  transition: all 0.2s ease;
+}
+
+.theme-modal-row-label {
+  color: var(--modal-row-label) !important;
+  transition: color 0.3s ease;
+}
+
+.theme-modal-reset-btn {
+  background-color: var(--modal-btn-bg) !important;
+  border-color: var(--modal-btn-border) !important;
+  color: var(--modal-btn-text) !important;
+  transition: all 0.2s ease;
+}
+
+.theme-modal-reset-btn:hover {
+  background-color: var(--modal-btn-hover-bg) !important;
+  color: var(--modal-btn-hover-text) !important;
+}
+
+/* Modal-specific custom scrollbar */
+.theme-modal-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.theme-modal-scrollbar::-webkit-scrollbar-track {
+  background: var(--modal-scroll-track);
+  border-radius: 3px;
+}
+
+.theme-modal-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--modal-scroll-thumb);
+  border-radius: 3px;
+}
+
+.theme-modal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--modal-scroll-thumb-hover);
+}
+
+/* fadeIn animation for modals, popovers, and elements */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Custom Color Picker popover styling updates */
+.color-picker-popover {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.workspace.mode-dark .color-picker-popover {
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+/* Custom checkbox wrapper alignment and style overrides */
+.theme-modal-checkbox {
+  cursor: pointer;
+  border-radius: 6px !important;
+}
+
+/* Theme modal custom dropdown overrides */
+.theme-modal-window .custom-select-trigger {
+  background-color: var(--modal-input-bg) !important;
+  border-color: var(--modal-input-border) !important;
+  color: var(--modal-input-text) !important;
+}
+
+.theme-modal-window .custom-select-trigger:hover {
+  background-color: var(--modal-input-hover-bg) !important;
+  color: var(--modal-text) !important;
+}
+
+.theme-modal-window .custom-select-trigger span {
+  color: var(--modal-input-text) !important;
+}
+
+.theme-modal-window .custom-select-trigger:hover span {
+  color: var(--modal-text) !important;
+}
+
+.theme-modal-window .custom-select-options {
+  background-color: var(--modal-select-option-bg) !important;
+  border-color: var(--modal-input-border) !important;
+  color: var(--modal-text) !important;
+}
+
+.theme-modal-window .custom-select-option {
+  color: var(--modal-text-muted) !important;
+}
+
+.theme-modal-window .custom-select-option:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: var(--modal-text) !important;
+}
+
+.workspace.mode-light .theme-modal-window .custom-select-option:hover {
+  background-color: rgba(0, 0, 0, 0.03) !important;
+}
+
+.theme-modal-window .custom-select-option span {
+  color: var(--modal-text) !important;
+}
+
+.theme-modal-window .custom-select-option.selected {
+  background-color: rgba(var(--accent-color-rgb), 0.1) !important;
+  color: var(--accent-color) !important;
+}
+
+.theme-modal-window .custom-select-option.selected span {
+  color: var(--accent-color) !important;
+}
+
+/* ============================================================
+ * 6. Additional Weight Badges and Checkboxes
+ * ============================================================ */
+
+/* Weight Badges */
+.weight-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.workspace.mode-dark .weight-badge.auto {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #d1d5db;
+  border-color: rgba(255, 255, 255, 0.05);
+}
+.workspace.mode-light .weight-badge.auto {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #4b5563;
+  border-color: rgba(0, 0, 0, 0.05);
+}
+
+.workspace.mode-dark .weight-badge.hero {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.2);
+}
+.workspace.mode-light .weight-badge.hero {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.workspace.mode-dark .weight-badge.bold {
+  background-color: #ffffff;
+  color: #111827;
+}
+.workspace.mode-light .weight-badge.bold {
+  background-color: #111827;
+  color: #ffffff;
+}
+
+.workspace.mode-dark .weight-badge.light {
+  background-color: rgba(0, 0, 0, 0.4);
+  color: #9ca3af;
+  border-color: rgba(255, 255, 255, 0.05);
+}
+.workspace.mode-light .weight-badge.light {
+  background-color: #ffffff;
+  color: #6b7280;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+/* AI Suggestions Checkbox */
+.theme-modal-checkbox {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px !important;
+  outline: none;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.theme-modal-checkbox::after {
+  content: '';
+  width: 8px;
+  height: 4px;
+  border-left: 2px solid white;
+  border-bottom: 2px solid white;
+  transform: rotate(-45deg) translate(1px, -1px);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.theme-modal-checkbox:checked::after {
+  opacity: 1;
+}
+
+.workspace.mode-dark .theme-modal-checkbox {
+  border: 1.5px solid rgba(255, 255, 255, 0.15) !important;
+  background-color: rgba(0, 0, 0, 0.3) !important;
+}
+
+.workspace.mode-light .theme-modal-checkbox {
+  border: 1.5px solid rgba(0, 0, 0, 0.2) !important;
+  background-color: #ffffff !important;
+}
+
+.workspace.mode-dark .theme-modal-checkbox:checked {
+  background-color: #8b5cf6 !important;
+  border-color: #8b5cf6 !important;
+}
+
+.workspace.mode-light .theme-modal-checkbox:checked {
+  background-color: #8b5cf6 !important;
+  border-color: #8b5cf6 !important;
+}
+
+/* Checked quote manager card highlight */
+.quote-manager-card.checked {
+  background-color: rgba(var(--accent-color-rgb), 0.08) !important;
+  border-color: rgba(var(--accent-color-rgb), 0.3) !important;
+}
+
+.workspace.mode-light .quote-manager-card.checked {
+  background-color: rgba(var(--accent-color-rgb), 0.04) !important;
+}
+
+/* Quote Manager UI Styles */
+.qm-inline-edit {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease;
+}
+
+.qm-inline-edit:hover:not(:disabled) {
+  background-color: rgba(var(--accent-color-rgb), 0.05) !important;
+  border-color: rgba(var(--accent-color-rgb), 0.15) !important;
+}
+
+.qm-inline-edit:focus:not(:disabled) {
+  background-color: rgba(var(--accent-color-rgb), 0.08) !important;
+  border-color: rgba(var(--accent-color-rgb), 0.3) !important;
+  box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb), 0.1) !important;
+}
+
+.qm-accent-btn {
+  background: linear-gradient(135deg, var(--accent-color), color-mix(in srgb, var(--accent-color) 80%, #000)) !important;
+  color: var(--theme-paper-bg) !important;
+  box-shadow: 0 8px 20px -4px rgba(var(--accent-color-rgb), 0.3) !important;
+  transition: all 0.2s ease !important;
+}
+
+.qm-accent-btn:hover:not(:disabled) {
+  filter: brightness(1.15) !important;
+}
+
+.qm-accent-btn:disabled {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+}
+
+.qm-secondary-btn {
+  background-color: var(--modal-btn-bg) !important;
+  border: 1px solid var(--modal-btn-border) !important;
+  color: var(--modal-btn-text) !important;
+  transition: all 0.2s ease !important;
+}
+
+.qm-secondary-btn:hover:not(:disabled) {
+  background-color: var(--modal-btn-hover-bg) !important;
+  color: var(--modal-btn-hover-text) !important;
+}
+
+.qm-tag-active {
+  background-color: rgba(var(--accent-color-rgb), 0.15) !important;
+  border-color: rgba(var(--accent-color-rgb), 0.3) !important;
+  color: var(--accent-color) !important;
+}
+
+.qm-count-active {
+  background-color: var(--accent-color) !important;
+  border-color: var(--accent-color) !important;
+  color: var(--theme-paper-bg) !important;
+}
+
+.qm-count-inactive {
+  background-color: var(--modal-btn-bg) !important;
+  border-color: var(--modal-btn-border) !important;
+  color: var(--modal-btn-text) !important;
+}
+
+.qm-count-inactive:hover:not(:disabled) {
+  background-color: var(--modal-btn-hover-bg) !important;
+  color: var(--modal-btn-hover-text) !important;
+}
+
+.qm-accent-text {
+  color: var(--accent-color) !important;
+}
+
+.qm-polish-result-box {
+  background-color: rgba(var(--accent-color-rgb), 0.04) !important;
+  border-color: rgba(var(--accent-color-rgb), 0.15) !important;
+}
+
+.qm-polish-textarea {
+  background-color: var(--modal-input-bg) !important;
+  border-color: var(--modal-input-border) !important;
+  color: var(--modal-input-text) !important;
+}
+
+.qm-polish-textarea:focus {
+  border-color: var(--modal-input-focus-border) !important;
+}
+
+.qm-warning-box {
+  background-color: rgba(245, 158, 11, 0.1) !important;
+  border-color: rgba(245, 158, 11, 0.25) !important;
+}
+
+.qm-warning-title {
+  color: #f59e0b !important;
+}
+
+.qm-warning-desc {
+  color: rgba(245, 158, 11, 0.85) !important;
+}
+
+.workspace.mode-light .qm-warning-desc {
+  color: #b45309 !important;
+}
+
+.qm-ai-polish-btn {
+  background-color: var(--modal-btn-bg) !important;
+  border-color: var(--modal-btn-border) !important;
+  color: var(--modal-btn-text) !important;
+}
+
+.qm-ai-polish-btn:hover:not(:disabled) {
+  background-color: var(--modal-btn-hover-bg) !important;
+  color: var(--modal-btn-hover-text) !important;
+}
+
+/* Checkbox overrides for themed color */
+.theme-modal-checkbox:checked {
+  background-color: var(--accent-color) !important;
+  border-color: var(--accent-color) !important;
+}
+

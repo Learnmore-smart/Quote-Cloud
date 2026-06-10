@@ -8,6 +8,8 @@ interface AutoFitQuoteProps {
   flex: number;
   showAuthor: boolean;
   loading: boolean;
+  theme: string;
+  fontFamily: string;
 }
 
 /* =============================================================================
@@ -28,7 +30,7 @@ const MAX_FONT = 200;
 /** Stop the search once the window is tighter than this (px). */
 const PRECISION = 0.4;
 
-export function AutoFitQuote({ item, flex, showAuthor, loading }: AutoFitQuoteProps) {
+export function AutoFitQuote({ item, flex, showAuthor, loading, theme, fontFamily }: AutoFitQuoteProps) {
   const { quote, isHero, fontWeight, lineHeight, uppercase } = item;
 
   const cellRef = useRef<HTMLDivElement>(null);
@@ -39,11 +41,15 @@ export function AutoFitQuote({ item, flex, showAuthor, loading }: AutoFitQuotePr
     const text = textRef.current;
     if (!cell || !text) return;
 
+    let cancelled = false;
+
     /**
      * Run the binary search against the cell's CURRENT inner size. Re-invoked
      * whenever the box resizes (paper / orientation change, panel reflow).
      */
     const fit = () => {
+      if (cancelled) return;
+      
       const maxH = cell.clientHeight;
       const maxW = cell.clientWidth;
       if (maxH <= 0 || maxW <= 0) return;
@@ -76,12 +82,22 @@ export function AutoFitQuote({ item, flex, showAuthor, loading }: AutoFitQuotePr
 
     fit();
 
+    // Re-fit when fonts are fully loaded and ready
+    if (typeof document !== 'undefined' && document.fonts) {
+      document.fonts.ready.then(() => {
+        if (!cancelled) fit();
+      });
+    }
+
     // The bento boxes change size when the paper / orientation changes. A
     // ResizeObserver re-grows the gas to the new walls without a manual dep.
     const observer = new ResizeObserver(() => fit());
     observer.observe(cell);
-    return () => observer.disconnect();
-  }, [quote.text, quote.author, showAuthor, fontWeight, lineHeight, uppercase, loading]);
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+    };
+  }, [quote.text, quote.author, showAuthor, fontWeight, lineHeight, uppercase, loading, theme, fontFamily]);
 
   const cellStyle: CSSProperties = {
     flexGrow: flex,

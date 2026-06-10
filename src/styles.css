@@ -1,17 +1,60 @@
 @import "tailwindcss";
 
 :root {
-  --workspace-bg: #dedbd2;
-  --panel-bg: #f7f4ec;
-  --panel-border: #b8b3aa;
-  --panel-ink: #191714;
-  --panel-muted: #6f685f;
+  /* Theme variables - set per class */
   --paper-bg: #fffefb;
   --paper-border: #a9a399;
   --w3-color: #111111;
   --w2-color: #2b2925;
   --w1-color: #615b52;
   --author-ink: #524c43;
+}
+
+/* ============================================================
+ * Workspace Modes (Dark/Light)
+ * ============================================================ */
+.workspace.mode-dark {
+  --workspace-bg: #090b11;
+  --workspace-bg-gradient: linear-gradient(135deg, #090a0f 0%, #111524 100%);
+  --workspace-grid-color: rgba(255, 255, 255, 0.06);
+  --workspace-spotlight: radial-gradient(circle, rgba(99, 102, 241, 0.07) 0%, rgba(99, 102, 241, 0) 70%);
+  --workspace-border: rgba(255, 255, 255, 0.05);
+  --glass-bg: rgba(12, 15, 25, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-text: #ffffff;
+  --glass-text-muted: #9ca3af;
+  --glass-text-header: #ffffff;
+  --glass-item-bg: rgba(255, 255, 255, 0.05);
+  --glass-item-border: rgba(255, 255, 255, 0.05);
+  --glass-item-hover: rgba(255, 255, 255, 0.1);
+  --glass-input-bg: rgba(0, 0, 0, 0.4);
+  --glass-input-border: rgba(255, 255, 255, 0.05);
+  --glass-input-hover: rgba(0, 0, 0, 0.6);
+  --glass-scrollbar-thumb: rgba(255, 255, 255, 0.15);
+  --glass-scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
+  --glass-scrollbar-track: rgba(0, 0, 0, 0.2);
+}
+
+.workspace.mode-light {
+  --workspace-bg: #eae7df;
+  --workspace-bg-gradient: linear-gradient(135deg, #e3e0d8 0%, #edeae2 100%);
+  --workspace-grid-color: rgba(0, 0, 0, 0.05);
+  --workspace-spotlight: radial-gradient(circle, rgba(99, 102, 241, 0.04) 0%, rgba(99, 102, 241, 0) 70%);
+  --workspace-border: rgba(0, 0, 0, 0.06);
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-text: #1f2937;
+  --glass-text-muted: #6b7280;
+  --glass-text-header: #111827;
+  --glass-item-bg: rgba(0, 0, 0, 0.03);
+  --glass-item-border: rgba(0, 0, 0, 0.04);
+  --glass-item-hover: rgba(0, 0, 0, 0.07);
+  --glass-input-bg: rgba(255, 255, 255, 0.75);
+  --glass-input-border: rgba(0, 0, 0, 0.08);
+  --glass-input-hover: rgba(255, 255, 255, 0.95);
+  --glass-scrollbar-thumb: rgba(0, 0, 0, 0.15);
+  --glass-scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
+  --glass-scrollbar-track: rgba(0, 0, 0, 0.05);
 }
 
 * {
@@ -23,62 +66,274 @@ body,
 #root {
   min-height: 100%;
   margin: 0;
+  height: 100%;
 }
 
 body {
   overflow: hidden;
   background: var(--workspace-bg);
-  color: var(--panel-ink);
-  font-family: "Noto Serif SC", "Source Han Serif SC", Georgia, serif;
+  color: #f3f4f6;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   letter-spacing: 0;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
 
-button,
-select,
-input {
-  font: inherit;
-  letter-spacing: 0;
-}
-
-/* Native <select> dropdown popup styling */
-select {
-  color-scheme: light;
-}
-
-select option {
-  padding: 8px 12px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #262626; /* neutral-800 */
-  background-color: #ffffff;
-}
-
-select option:hover,
-select option:focus,
-select option:checked {
-  color: #ffffff;
-  background-color: #171717; /* neutral-900 */
-}
-
-/* Highlight the active option using the accent color on supporting browsers */
-select {
-  accent-color: #171717;
-}
-
-.app {
+/* ============================================================
+ * Studio Workspace Layout
+ * ============================================================ */
+.workspace {
   position: fixed;
   inset: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--workspace-bg-gradient);
+  z-index: 10;
+  overflow: hidden;
+  transition: background 0.4s ease;
+}
+
+.workspace-grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(var(--workspace-grid-color) 1.5px, transparent 1.5px);
+  background-size: 28px 28px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Backlight spotlight effect behind the paper canvas */
+.workspace::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 900px;
+  height: 900px;
+  background: var(--workspace-spotlight);
+  pointer-events: none;
+  z-index: 2;
+  transition: background 0.4s ease;
+}
+
+/* Workspace Header */
+.workspace-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--workspace-border);
+  background: linear-gradient(to bottom, var(--workspace-bg), transparent);
+  z-index: 40;
+  transition: background 0.4s ease, border-color 0.4s ease;
+}
+
+.workspace-header .logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  color: #ffffff;
+  text-transform: uppercase;
+}
+
+.logo-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--accent-color, #10b981);
+  box-shadow: 0 0 10px var(--accent-color, #10b981);
+  display: inline-block;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.logo-sub {
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2px 6px;
+  border-radius: 6px;
+  letter-spacing: 0;
+  margin-left: 4px;
+}
+
+/* Header Switchers */
+.header-lang-switcher,
+.header-theme-switcher {
+  position: relative; /* Ensure children can be positioned relative to this container */
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 2px;
+  pointer-events: auto;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.header-lang-switcher .slider {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc(50% - 3px);
+  border-radius: 8px;
+  background: #262626; /* bg-neutral-800 */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.header-lang-switcher.lang-en .slider {
+  transform: translateX(calc(100% + 2px));
+}
+
+.header-lang-switcher .header-switcher-btn {
+  position: relative;
+  z-index: 1;
+  width: 46px; /* fixed width for language buttons to make slider translation pixel-perfect */
+}
+
+/* Override active state for language switcher buttons since slider handles the background */
+.header-lang-switcher .header-switcher-btn.active {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
+.header-switcher-btn {
+  cursor: pointer;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 8px;
+  color: #9ca3af; /* text-neutral-400 */
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 72px 32px 32px;
+  border: 1px solid transparent;
+}
+
+.header-switcher-btn:hover {
+  color: #f3f4f6; /* text-neutral-200 */
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.header-switcher-btn.active {
+  background: #262626; /* bg-neutral-800 */
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Light Mode Overrides for Header Switchers */
+.workspace.mode-light .header-lang-switcher,
+.workspace.mode-light .header-theme-switcher {
+  background: rgba(255, 255, 255, 0.6) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Light mode overrides for language switcher slider */
+.workspace.mode-light .header-lang-switcher .slider {
+  background: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+  border: 1px solid rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Light mode override for active button inside language switcher */
+.workspace.mode-light .header-lang-switcher .header-switcher-btn.active {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
+.workspace.mode-light .header-switcher-btn {
+  color: #6b7280 !important; /* text-gray-500 */
+}
+
+.workspace.mode-light .header-switcher-btn:hover {
+  color: #111827 !important; /* text-gray-900 */
+  background: rgba(0, 0, 0, 0.03) !important;
+}
+
+.workspace.mode-light .header-switcher-btn.active {
+  background: #ffffff !important;
+  color: #111827 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+  border-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+
+/* Workspace Footer */
+.workspace-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+  background: linear-gradient(to top, rgba(9, 10, 15, 0.8), rgba(9, 10, 15, 0));
+  z-index: 40;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.footer-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.footer-info .separator {
+  color: rgba(255, 255, 255, 0.15);
+}
+
+.workspace-footer .signature {
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+
+.workspace-footer .signature span {
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Workspace Main Viewport */
+.app-main {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 356px 48px 32px; /* Extra padding right for the ControlPanel width */
+  z-index: 30;
   transition: padding-right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.app.orientation-landscape {
-  padding-right: 340px;
+.app-main.orientation-landscape {
+  padding-right: 356px;
 }
 
 .paper-stage {
@@ -90,9 +345,26 @@ select {
   justify-content: center;
 }
 
+/* ============================================================
+ * Realistic Floating Paper Frame
+ * ============================================================ */
 .paper-frame {
   position: relative;
   flex: 0 0 auto;
+  box-shadow: 
+    0 12px 32px -4px rgba(0, 0, 0, 0.12),
+    0 4px 12px -2px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  border-radius: 4px;
+  transition: box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.paper-frame:hover {
+  box-shadow: 
+    0 24px 48px -8px rgba(0, 0, 0, 0.16),
+    0 8px 20px -4px rgba(0, 0, 0, 0.12),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  transform: translateY(-4px) scale(1.01);
 }
 
 .paper-canvas {
@@ -100,41 +372,312 @@ select {
   inset: 0 auto auto 0;
   overflow: hidden;
   transform-origin: top left;
-  background: var(--paper-bg);
-  border: 1px solid var(--paper-border);
-  color: var(--w3-color);
+  border-radius: 2px;
+  transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease;
 }
 
 /* ============================================================
- * Bento Box Mosaic — rigid, hole-free tiling.
- * The field is a vertical flex column. Each ROW flex-grows to
- * claim its share of the height; each CELL flex-grows to claim
- * its share of the row width. Together they tile 100% of the
- * page with ZERO gaps. Each cell's text is grown independently
- * by the per-cell <AutoFitQuote> gas-expansion search — there
- * is no global `--base` anymore.
+ * Poster Visual Themes
+ * ============================================================ */
+
+/* 1. Warm Editorial Theme (Classic Serif) */
+.paper-canvas.theme-editorial {
+  --paper-bg: #fffef9;
+  --paper-border: #e3decb;
+  --w3-color: #161513;
+  --w2-color: #2b2926;
+  --w1-color: #59544c;
+  --author-ink: #7a6e5e;
+  background: var(--paper-bg);
+  color: var(--w3-color);
+  font-family: "Noto Serif SC", "Source Han Serif SC", Georgia, serif;
+}
+.paper-canvas.theme-editorial .quote-cell {
+  padding: 0 0.6rem;
+  border: none;
+}
+.paper-canvas.theme-editorial .quote-row {
+  border-bottom: none;
+}
+
+/* 2. Midnight Gallery Theme (Dark Gold Serif) */
+.paper-canvas.theme-midnight {
+  --paper-bg: #111111;
+  --paper-border: #222222;
+  --w3-color: #ffffff;
+  --w2-color: #d4af37; /* Matte Gold */
+  --w1-color: #a3a3a3;
+  --author-ink: #737373;
+  background: var(--paper-bg);
+  color: var(--w3-color);
+  font-family: "Cormorant Garamond", "Noto Serif SC", "Source Han Serif SC", serif;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+}
+.paper-canvas.theme-midnight .quote-cell {
+  padding: 0 0.8rem;
+  border: none;
+}
+.paper-canvas.theme-midnight .quote-row {
+  border-bottom: none;
+}
+.paper-canvas.theme-midnight .quote-hero {
+  color: var(--w2-color); /* Hero is pure Gold */
+}
+
+/* 3. Swiss Typographic Theme (Stark Grotesque Grid) */
+.paper-canvas.theme-swiss {
+  --paper-bg: #ffffff;
+  --paper-border: #111111;
+  --w3-color: #000000;
+  --w2-color: #171717;
+  --w1-color: #525252;
+  --author-ink: #e11d48; /* Swiss Red accent for author */
+  background: var(--paper-bg);
+  color: var(--w3-color);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: -0.03em;
+}
+.paper-canvas.theme-swiss .quote-cell {
+  padding: 0.8rem;
+  border-right: 1px solid rgba(0, 0, 0, 0.12);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+.paper-canvas.theme-swiss .quote-cell:last-child {
+  border-right: none;
+}
+.paper-canvas.theme-swiss .quote-row {
+  border-bottom: none; /* Handled by cells */
+}
+.paper-canvas.theme-swiss .quote-row:last-child .quote-cell {
+  border-bottom: none;
+}
+.paper-canvas.theme-swiss .scatter-field {
+  padding: 1rem;
+}
+.paper-canvas.theme-swiss .quote {
+  font-weight: 800 !important;
+  letter-spacing: -0.03em;
+  text-wrap: wrap;
+}
+.paper-canvas.theme-swiss .quote-hero {
+  font-weight: 900 !important;
+  text-transform: uppercase;
+}
+
+/* 4. Terminal Monospace Theme */
+.paper-canvas.theme-mono {
+  --paper-bg: #0b0f17;
+  --paper-border: #10b981;
+  --w3-color: #10b981; /* Matrix green */
+  --w2-color: #34d399;
+  --w1-color: #059669;
+  --author-ink: #f59e0b; /* Amber warning accent */
+  background: var(--paper-bg);
+  color: var(--w3-color);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  letter-spacing: -0.01em;
+}
+.paper-canvas.theme-mono .quote-cell {
+  padding: 0.6rem;
+  border-right: 1px dashed rgba(16, 185, 129, 0.18);
+  border-bottom: 1px dashed rgba(16, 185, 129, 0.18);
+}
+.paper-canvas.theme-mono .quote-cell:last-child {
+  border-right: none;
+}
+.paper-canvas.theme-mono .quote-row:last-child .quote-cell {
+  border-bottom: none;
+}
+.paper-canvas.theme-mono .scatter-field {
+  padding: 1.2rem;
+}
+
+/* 5. Vintage Journal Theme (Aged Ink) */
+.paper-canvas.theme-vintage {
+  --paper-bg: #f2e9dc; /* Aged sepia paper */
+  --paper-border: #c8bba6;
+  --w3-color: #0f172a; /* Deep blue-grey ink */
+  --w2-color: #1e293b;
+  --w1-color: #475569;
+  --author-ink: #7c2d12; /* Rust/terracotta author */
+  background: var(--paper-bg);
+  color: var(--w3-color);
+  font-family: "Cormorant Garamond", "Noto Serif SC", serif;
+}
+.paper-canvas.theme-vintage .quote-cell {
+  padding: 0 0.5rem;
+  border: none;
+}
+.paper-canvas.theme-vintage .quote-row {
+  border-bottom: none;
+}
+
+/* 6. Nordic Calm Theme (Minimalist Sans) */
+.paper-canvas.theme-nordic {
+  background: var(--paper-bg);
+  color: var(--w3-color);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: -0.02em;
+}
+.paper-canvas.theme-nordic .quote-cell {
+  padding: 0.75rem;
+  border-right: 1px solid var(--paper-border);
+  border-bottom: 1px solid var(--paper-border);
+}
+.paper-canvas.theme-nordic .quote-cell:last-child {
+  border-right: none;
+}
+.paper-canvas.theme-nordic .quote-row {
+  border-bottom: none;
+}
+.paper-canvas.theme-nordic .quote-row:last-child .quote-cell {
+  border-bottom: none;
+}
+.paper-canvas.theme-nordic .scatter-field {
+  padding: 1.25rem;
+}
+.paper-canvas.theme-nordic .quote {
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+.paper-canvas.theme-nordic .quote-hero {
+  font-weight: 700;
+}
+
+/* 7. Forest Moss Theme (Classic Serene Serif) */
+.paper-canvas.theme-forest {
+  background: var(--paper-bg);
+  color: var(--w3-color);
+  font-family: "Noto Serif SC", "Source Han Serif SC", serif;
+}
+.paper-canvas.theme-forest .quote-cell {
+  padding: 0 0.6rem;
+  border: none;
+}
+.paper-canvas.theme-forest .quote-row {
+  border-bottom: none;
+}
+
+/* 8. Lavender Mist Theme (Elegant Classic Serif) */
+.paper-canvas.theme-lavender {
+  background: var(--paper-bg);
+  color: var(--w3-color);
+  font-family: "Cormorant Garamond", "Noto Serif SC", serif;
+}
+.paper-canvas.theme-lavender .quote-cell {
+  padding: 0 0.8rem;
+  border: none;
+}
+.paper-canvas.theme-lavender .quote-row {
+  border-bottom: none;
+}
+.paper-canvas.theme-lavender .quote-hero {
+  color: var(--w2-color);
+}
+
+/* 9. Cyberpunk Theme (High Contrast Digital Mono) */
+.paper-canvas.theme-cyberpunk {
+  background: var(--paper-bg);
+  color: var(--w3-color);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: -0.02em;
+}
+.paper-canvas.theme-cyberpunk .quote-cell {
+  padding: 0.6rem;
+  border-right: 2px solid var(--paper-border);
+  border-bottom: 2px solid var(--paper-border);
+}
+.paper-canvas.theme-cyberpunk .quote-cell:last-child {
+  border-right: none;
+}
+.paper-canvas.theme-cyberpunk .quote-row:last-child .quote-cell {
+  border-bottom: none;
+}
+.paper-canvas.theme-cyberpunk .scatter-field {
+  padding: 1.2rem;
+}
+.paper-canvas.theme-cyberpunk .quote {
+  font-weight: 700 !important;
+}
+.paper-canvas.theme-cyberpunk .quote-hero {
+  font-weight: 900 !important;
+  text-transform: uppercase;
+}
+
+/* 10. Oceanic Breeze Theme (Modern Sans Grid) */
+.paper-canvas.theme-oceanic {
+  background: var(--paper-bg);
+  color: var(--w3-color);
+  font-family: "Inter", -apple-system, sans-serif;
+}
+.paper-canvas.theme-oceanic .quote-cell {
+  padding: 0.8rem;
+  border-right: 1px solid var(--paper-border);
+  border-bottom: 1px solid var(--paper-border);
+}
+.paper-canvas.theme-oceanic .quote-cell:last-child {
+  border-right: none;
+}
+.paper-canvas.theme-oceanic .quote-row {
+  border-bottom: none;
+}
+.paper-canvas.theme-oceanic .quote-row:last-child .quote-cell {
+  border-bottom: none;
+}
+.paper-canvas.theme-oceanic .scatter-field {
+  padding: 1rem;
+}
+.paper-canvas.theme-oceanic .quote {
+  font-weight: 600;
+}
+
+/* 11. Custom Theme */
+.paper-canvas.theme-custom {
+  background: var(--paper-bg);
+  color: var(--w3-color);
+}
+.paper-canvas.theme-custom .quote-cell {
+  padding: 0.75rem;
+  border-right: 1px solid var(--paper-border);
+  border-bottom: 1px solid var(--paper-border);
+}
+.paper-canvas.theme-custom .quote-cell:last-child {
+  border-right: none;
+}
+.paper-canvas.theme-custom .quote-row {
+  border-bottom: none;
+}
+.paper-canvas.theme-custom .quote-row:last-child .quote-cell {
+  border-bottom: none;
+}
+.paper-canvas.theme-custom .scatter-field {
+  padding: 1rem;
+}
+
+/* ============================================================
+ * Bento Box Mosaic Structure
  * ============================================================ */
 .scatter-field {
   width: 100%;
   height: 100%;
-  padding: 1.5rem;
+  padding: 1.75rem;
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 0;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
-/* A single full-width mosaic row of 1–3 bento boxes. */
 .quote-row {
   display: flex;
   width: 100%;
   align-items: stretch;
   gap: 0;
   min-height: 0;
+  box-sizing: border-box;
 }
 
-/* One closed box. The text inside is auto-fit to these walls. */
 .quote-cell {
   position: relative;
   height: 100%;
@@ -174,7 +717,7 @@ select {
 .quote-hero {
   letter-spacing: -0.02em;
   color: var(--w3-color);
-  /* The Hero reads like a title/logo — centered, never justified. */
+  /* The Hero reads like a title/logo – centered, never justified. */
   text-align: center;
   text-align-last: center;
 }
@@ -189,83 +732,215 @@ select {
   opacity: 0.85;
 }
 
+/* ============================================================
+ * UI Panels (Controls / Drawer)
+ * ============================================================ */
 .controls {
-  position: fixed;
+  box-shadow: 
+    0 30px 70px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
 }
 
-.print-btn {
-  display: none;
+/* Custom Webkit scrollbar for premium feel */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
 
-.loader {
+.custom-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Focus and hover glow */
+textarea:focus,
+input:focus,
+select:focus,
+.custom-select-trigger:focus,
+.theme-modal-select:focus {
+  border-color: rgba(var(--accent-color-rgb), 0.4) !important;
+  box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb), 0.1) !important;
+}
+
+/* Switch styling overrides */
+button[role="switch"] {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+}
+
+/* Button scaling animation */
+button:active {
+  transform: scale(0.98);
+}
+
+/* ============================================================
+ * Premium Typography Loader Screen
+ * ============================================================ */
+.loader-container {
   position: absolute;
   inset: 0;
   z-index: 100;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: var(--paper-bg);
-  color: var(--w2-color);
 }
 
-.loader.hidden {
+.loader-container.hidden {
   display: none;
 }
 
-.loader .pulse {
-  width: 36px;
-  height: 36px;
-  margin-bottom: 16px;
-  border: 1px solid var(--paper-border);
+.loader-backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--paper-bg);
+  opacity: 0.97;
+  transition: background-color 0.4s ease;
+}
+
+.loader-content {
+  position: relative;
+  z-index: 101;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: center;
+}
+
+.loader-spinner {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 2px solid rgba(0, 0, 0, 0.04);
+  border-top: 2px solid var(--w3-color);
   border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
-.loader .label {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 0;
+/* For dark mode paper themes (Midnight, Monospace) */
+.theme-midnight .spinner-ring {
+  border: 2px solid rgba(255, 255, 255, 0.05);
+  border-top: 2px solid var(--w2-color);
+}
+.theme-mono .spinner-ring {
+  border: 2px solid rgba(16, 185, 129, 0.05);
+  border-top: 2px solid var(--w3-color);
 }
 
-.loader .sub {
-  margin-top: 4px;
-  color: var(--author-ink);
-  font-size: 12px;
-  letter-spacing: 0;
-}
-
-.signature {
-  position: fixed;
-  left: 18px;
-  bottom: 16px;
-  z-index: 50;
-  color: var(--panel-muted);
+.spinner-core {
   font-size: 11px;
-  letter-spacing: 0;
-  user-select: none;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: var(--w3-color);
+  animation: pulse 1.8s ease-in-out infinite;
 }
 
+.theme-midnight .spinner-core {
+  color: var(--w2-color);
+}
+
+.loader-content .label {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--w3-color);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.loader-content .sub {
+  color: var(--author-ink);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+}
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================================
+ * Printing & Exporting Optimizations
+ * ============================================================ */
 @media print {
   html,
   body,
-  #root {
-    width: 100%;
-    height: 100%;
+  #root,
+  .workspace {
+    width: 100% !important;
+    height: 100% !important;
     background: #ffffff !important;
     overflow: visible !important;
+    position: relative !important;
+    z-index: auto !important;
   }
 
+  .workspace::after,
+  .workspace-grid,
+  .workspace-header,
+  .workspace-footer,
   .controls,
-  .loader,
-  .signature {
+  .loader-container,
+  aside {
     display: none !important;
   }
 
-  .app {
+  .app-main {
     position: fixed !important;
     inset: 0 !important;
     display: block !important;
     padding: 0 !important;
+    margin: 0 !important;
+    z-index: 100 !important;
   }
 
   .paper-stage,
@@ -275,6 +950,8 @@ select {
     display: block !important;
     width: 100vw !important;
     height: 100vh !important;
+    transform: none !important;
+    box-shadow: none !important;
   }
 
   .paper-canvas {
@@ -282,16 +959,799 @@ select {
     inset: 0 !important;
     width: 100vw !important;
     height: 100vh !important;
-    border: 0 !important;
-    background: #ffffff !important;
-    color: #000000 !important;
+    border: none !important;
+    border-radius: 0 !important;
     transform: none !important;
   }
 
-  .quote,
-  .quote-hero,
-  .quote .text,
-  .quote .author-name {
+  /* Force print color settings */
+  .paper-canvas.theme-editorial {
+    background: #ffffff !important;
     color: #000000 !important;
   }
+  .paper-canvas.theme-editorial .quote,
+  .paper-canvas.theme-editorial .quote-hero,
+  .paper-canvas.theme-editorial .author-name {
+    color: #000000 !important;
+  }
+
+  .paper-canvas.theme-midnight {
+    background: #000000 !important;
+    color: #ffffff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .paper-canvas.theme-midnight .quote {
+    color: #ffffff !important;
+  }
+  .paper-canvas.theme-midnight .quote-hero {
+    color: #d4af37 !important;
+  }
+  .paper-canvas.theme-midnight .author-name {
+    color: #a3a3a3 !important;
+  }
+
+  .paper-canvas.theme-swiss {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .paper-canvas.theme-swiss .quote,
+  .paper-canvas.theme-swiss .quote-hero {
+    color: #000000 !important;
+  }
+  .paper-canvas.theme-swiss .author-name {
+    color: #e11d48 !important;
+  }
+  .paper-canvas.theme-swiss .quote-cell {
+    border-right-color: rgba(0, 0, 0, 0.2) !important;
+    border-bottom-color: rgba(0, 0, 0, 0.2) !important;
+  }
+
+  .paper-canvas.theme-mono {
+    background: #000000 !important;
+    color: #10b981 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .paper-canvas.theme-mono .quote {
+    color: #34d399 !important;
+  }
+  .paper-canvas.theme-mono .quote-hero {
+    color: #10b981 !important;
+  }
+  .paper-canvas.theme-mono .author-name {
+    color: #f59e0b !important;
+  }
+  .paper-canvas.theme-mono .quote-cell {
+    border-right-color: rgba(16, 185, 129, 0.3) !important;
+    border-bottom-color: rgba(16, 185, 129, 0.3) !important;
+  }
+
+  .paper-canvas.theme-vintage {
+    background: #f2e9dc !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .paper-canvas.theme-vintage .quote,
+  .paper-canvas.theme-vintage .quote-hero {
+    color: #0f172a !important;
+  }
+  .paper-canvas.theme-vintage .author-name {
+    color: #7c2d12 !important;
+  }
 }
+
+/* ============================================================
+ * Workspace Mode Light Override Styles
+ * ============================================================ */
+.workspace.mode-light .workspace-header {
+  border-bottom: 1px solid var(--workspace-border) !important;
+  background: linear-gradient(to bottom, var(--workspace-bg), transparent) !important;
+}
+
+.workspace.mode-light .workspace-header .logo {
+  color: var(--glass-text-header) !important;
+}
+
+.workspace.mode-light .logo-sub {
+  color: var(--glass-text-muted) !important;
+  background: var(--glass-item-bg) !important;
+}
+
+
+.workspace.mode-light .workspace-footer {
+  border-top: 1px solid var(--workspace-border) !important;
+  background: linear-gradient(to top, var(--workspace-bg), transparent) !important;
+  color: var(--glass-text-muted) !important;
+}
+
+.workspace.mode-light .workspace-footer .signature span {
+  color: var(--glass-text) !important;
+}
+
+.workspace.mode-light .footer-info .separator {
+  color: rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Control Panel Overrides */
+.workspace.mode-light .controls {
+  background: var(--glass-bg) !important;
+  border-color: var(--glass-border) !important;
+  color: var(--glass-text) !important;
+  box-shadow: 
+    0 30px 60px -15px rgba(0, 0, 0, 0.08),
+    0 10px 20px -20px rgba(0, 0, 0, 0.05),
+    0 0 0 1px rgba(255, 255, 255, 0.7) inset !important;
+}
+
+.workspace.mode-light .controls .border-b {
+  border-color: var(--workspace-border) !important;
+}
+
+.workspace.mode-light .controls a {
+  color: var(--glass-text-muted) !important;
+}
+
+.workspace.mode-light .controls a:hover {
+  color: var(--glass-text-header) !important;
+}
+
+.workspace.mode-light .controls h1 {
+  color: var(--glass-text-header) !important;
+}
+
+.workspace.mode-light .controls p {
+  color: var(--glass-text-muted) !important;
+}
+
+.workspace.mode-light .controls .text-neutral-400 {
+  color: var(--glass-text-muted) !important;
+}
+
+.workspace.mode-light .controls select {
+  background-color: var(--glass-input-bg) !important;
+  border-color: var(--glass-input-border) !important;
+  color: var(--glass-text) !important;
+}
+
+.workspace.mode-light .controls select:hover {
+  background-color: var(--glass-input-hover) !important;
+}
+
+.workspace.mode-light .controls select option {
+  background-color: #ffffff !important;
+  color: #1f2937 !important;
+}
+
+.workspace.mode-light .controls select:focus {
+  border-color: rgba(16, 185, 129, 0.4) !important;
+}
+
+.workspace.mode-light .controls .bg-black\/40 {
+  background-color: var(--glass-item-bg) !important;
+  border-color: var(--glass-item-border) !important;
+}
+
+.workspace.mode-light .controls button:not(.controls-cta-btn) {
+  color: var(--glass-text-muted) !important;
+}
+
+.workspace.mode-light .controls button:not(.controls-cta-btn):hover {
+  color: var(--glass-text-header) !important;
+  background-color: var(--glass-item-bg) !important;
+}
+
+.workspace.mode-light .controls button.bg-neutral-800 {
+  background-color: var(--glass-bg-active) !important;
+  border-color: var(--glass-border-active) !important;
+  color: var(--glass-text-header) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05) !important;
+}
+
+.workspace.mode-light .controls button.bg-gradient-to-r {
+  color: #ffffff !important;
+}
+
+.workspace.mode-light .controls button.bg-white\/5 {
+  background-color: var(--glass-item-bg) !important;
+  border-color: var(--glass-item-border) !important;
+  color: var(--glass-text) !important;
+}
+
+.workspace.mode-light .controls button.bg-white\/5:hover {
+  background-color: var(--glass-item-hover) !important;
+  color: var(--glass-text-header) !important;
+}
+
+.workspace.mode-light .controls button.bg-white\/5 svg {
+  color: var(--glass-text-muted) !important;
+}
+
+.workspace.mode-light .controls .grid-cols-1 button {
+  background-color: var(--glass-item-bg) !important;
+  border-color: var(--glass-item-border) !important;
+  color: var(--glass-text) !important;
+}
+
+.workspace.mode-light .controls .grid-cols-1 button:hover {
+  background-color: var(--glass-item-hover) !important;
+  color: var(--glass-text-header) !important;
+}
+
+.workspace.mode-light .controls .grid-cols-1 button.bg-neutral-800 {
+  background-color: #171717 !important;
+  border-color: #171717 !important;
+  color: #ffffff !important;
+}
+
+.workspace.mode-light .controls .bg-black\/30 {
+  background-color: var(--glass-item-bg) !important;
+  border-color: var(--glass-item-border) !important;
+}
+
+.workspace.mode-light .controls .bg-black\/30 span.text-neutral-200 {
+  color: var(--glass-text) !important;
+}
+
+.workspace.mode-light .controls .bg-black\/30 span.text-neutral-400 {
+  color: var(--glass-text-muted) !important;
+}
+
+.workspace.mode-light .controls .bg-neutral-700 {
+  background-color: #d4d4d4 !important;
+}
+
+.workspace.mode-light .controls .bg-emerald-500 {
+  background-color: #10b981 !important;
+}
+
+/* Quote Manager Drawer Overrides */
+.workspace.mode-light aside[role="dialog"] {
+  background: #ffffff !important;
+  border-left-color: rgba(0, 0, 0, 0.08) !important;
+  color: var(--glass-text) !important;
+  box-shadow: -20px 0 60px rgba(0, 0, 0, 0.08) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] h2 {
+  color: var(--glass-text-header) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] .border-b {
+  border-color: var(--workspace-border) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] p.text-neutral-400 {
+  color: var(--glass-text-muted) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] span.text-neutral-400 {
+  color: var(--glass-text-muted) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] .bg-black\/20 {
+  background-color: var(--glass-item-bg) !important;
+  border-color: var(--glass-item-border) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] .bg-black\/20 button {
+  color: var(--glass-text-muted) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] .bg-black\/20 button.text-white {
+  background-color: var(--glass-bg-active) !important;
+  border-color: var(--glass-border-active) !important;
+  color: var(--glass-text-header) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] .bg-white\/5 {
+  background-color: var(--glass-item-bg) !important;
+  border-color: var(--glass-item-border) !important;
+  color: var(--glass-text) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] .bg-white\/5:hover {
+  background-color: var(--glass-item-hover) !important;
+  color: var(--glass-text-header) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] .pt-5 {
+  border-color: var(--workspace-border) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] textarea,
+.workspace.mode-light aside[role="dialog"] input[type="text"] {
+  background-color: var(--glass-input-bg) !important;
+  border-color: var(--glass-input-border) !important;
+  color: var(--glass-text) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] textarea:hover,
+.workspace.mode-light aside[role="dialog"] input[type="text"]:hover {
+  background-color: var(--glass-input-hover) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] select {
+  background-color: var(--glass-input-bg) !important;
+  border-color: var(--glass-input-border) !important;
+  color: var(--glass-text) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] select option {
+  background-color: #ffffff !important;
+  color: #1f2937 !important;
+}
+
+.workspace.mode-light aside[role="dialog"] button[type="submit"] {
+  background-color: #1f2937 !important;
+  color: #ffffff !important;
+}
+
+.workspace.mode-light aside[role="dialog"] button[type="submit"]:hover {
+  background-color: #111827 !important;
+}
+
+/* Quote Cards inside Drawer */
+.workspace.mode-light aside[role="dialog"] ul li.bg-white\/5 {
+  background-color: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] ul li.bg-white\/5:hover {
+  background-color: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] ul li p.text-neutral-200 {
+  color: var(--glass-text) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] ul li span.text-neutral-400 {
+  color: var(--glass-text-muted) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] ul li button.text-neutral-400 {
+  color: rgba(0, 0, 0, 0.3) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] ul li button.text-neutral-400:hover {
+  color: #ef4444 !important;
+  background-color: #fee2e2 !important;
+}
+
+/* Weight badges */
+.workspace.mode-light aside[role="dialog"] .bg-neutral-800 {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  color: #4b5563 !important;
+  border-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] .bg-amber-950\/80 {
+  background-color: #fef3c7 !important;
+  color: #b45309 !important;
+  border-color: rgba(180, 83, 9, 0.15) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] .bg-neutral-200 {
+  background-color: #1f2937 !important;
+  color: #ffffff !important;
+}
+
+.workspace.mode-light aside[role="dialog"] .bg-neutral-900 {
+  background-color: #f9fafb !important;
+  color: #9ca3af !important;
+  border-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+/* AI suggestions styling */
+.workspace.mode-light aside[role="dialog"] .bg-black\/40 {
+  background-color: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] .bg-purple-950\/20 {
+  background-color: #faf5ff !important;
+  border-color: rgba(147, 51, 234, 0.18) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] .bg-purple-950\/20 textarea,
+.workspace.mode-light aside[role="dialog"] .bg-purple-950\/20 input {
+  color: #581c87 !important;
+}
+
+.workspace.mode-light aside[role="dialog"] .text-purple-300 {
+  color: #7e22ce !important;
+}
+
+.workspace.mode-light aside[role="dialog"] .bg-purple-950\/40 {
+  background-color: #f3e8ff !important;
+  border-color: rgba(147, 51, 234, 0.15) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] .bg-white\/8 {
+  background-color: rgba(0, 0, 0, 0.02) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] .text-neutral-300 {
+  color: #374151 !important;
+}
+
+.workspace.mode-light aside[role="dialog"] .text-neutral-400 {
+  color: #6b7280 !important;
+}
+
+.workspace.mode-light aside[role="dialog"] .border-white\/5 {
+  border-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] li.opacity-40 {
+  opacity: 0.55 !important;
+}
+
+.workspace.mode-light aside[role="dialog"] select.text-neutral-300 {
+  color: #4b5563 !important;
+}
+
+/* AI Polish Results box */
+.workspace.mode-light aside[role="dialog"] .bg-purple-950\/20.border-purple-500\/20 {
+  background-color: #faf5ff !important;
+  border-color: rgba(147, 51, 234, 0.2) !important;
+}
+
+.workspace.mode-light aside[role="dialog"] .bg-purple-950\/20.border-purple-500\/20 span.text-purple-300 {
+  color: #7e22ce !important;
+}
+
+.workspace.mode-light aside[role="dialog"] select.border-purple-500\/20 {
+  border-color: rgba(147, 51, 234, 0.2) !important;
+  background-color: #ffffff !important;
+  color: #7e22ce !important;
+}
+
+.workspace.mode-light .custom-scrollbar {
+  scrollbar-color: var(--glass-scrollbar-thumb) transparent !important;
+}
+.workspace.mode-light .custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+.workspace.mode-light .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--glass-scrollbar-thumb) !important;
+  border: 3px solid transparent !important;
+  background-clip: padding-box !important;
+}
+.workspace.mode-light .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--glass-scrollbar-thumb-hover) !important;
+  border: 3px solid transparent !important;
+  background-clip: padding-box !important;
+}
+
+/* ============================================================
+ * Wallpaper Mask & Preview Styles
+ * ============================================================ */
+
+.wallpaper-mask {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5; /* Sit between canvas background and text */
+  transition: opacity 0.3s ease;
+}
+
+.wallpaper-mask.mask-dark {
+  background-color: #000000;
+}
+
+.wallpaper-mask.mask-light {
+  background-color: #ffffff;
+}
+
+.wallpaper-mask.mask-gradient-dark {
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.85) 0%,
+    rgba(0, 0, 0, 0.4) 20%,
+    rgba(0, 0, 0, 0) 50%,
+    rgba(0, 0, 0, 0.4) 80%,
+    rgba(0, 0, 0, 0.85) 100%
+  );
+}
+
+.wallpaper-mask.mask-gradient-light {
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.85) 0%,
+    rgba(255, 255, 255, 0.4) 20%,
+    rgba(255, 255, 255, 0) 50%,
+    rgba(255, 255, 255, 0.4) 80%,
+    rgba(255, 255, 255, 0.85) 100%
+  );
+}
+
+.wallpaper-mask.mask-vignette {
+  background: radial-gradient(circle, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.75) 100%);
+}
+
+/* Wallpaper Preview Overlay */
+.wallpaper-preview-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10; /* Keep on top of text and mask */
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+/* Phone Portrait Lock Screen Layout */
+.phone-preview {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 30px 24px;
+  box-sizing: border-box;
+}
+
+.phone-dynamic-island {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 110px;
+  height: 28px;
+  background-color: #000000;
+  border-radius: 20px;
+  z-index: 15;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.phone-status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--w3-color);
+  opacity: 0.85;
+  height: 22px;
+  padding: 0 16px;
+  margin-top: -6px;
+  z-index: 12;
+}
+
+.phone-icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.phone-icons svg {
+  width: 16px;
+  height: 16px;
+  color: inherit;
+}
+
+.phone-lock-header {
+  position: absolute;
+  top: 85px;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--w3-color);
+  opacity: 0.9;
+  text-align: center;
+  z-index: 12;
+}
+
+.phone-date {
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.phone-clock {
+  font-size: 82px;
+  font-weight: 700;
+  margin-top: 2px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.phone-lock-footer {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 16px;
+  margin-bottom: 24px;
+  z-index: 12;
+}
+
+.phone-footer-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s, background 0.2s;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.phone-footer-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.05);
+}
+
+.phone-footer-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.phone-swipe-bar {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 138px;
+  height: 5px;
+  background-color: var(--w3-color);
+  border-radius: 10px;
+  opacity: 0.75;
+  z-index: 12;
+}
+
+/* Adapt phone lockscreen colors for light backgrounds */
+.theme-editorial .phone-footer-btn,
+.theme-swiss .phone-footer-btn,
+.theme-vintage .phone-footer-btn {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: var(--w3-color);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.theme-editorial .phone-footer-btn:hover,
+.theme-swiss .phone-footer-btn:hover,
+.theme-vintage .phone-footer-btn:hover {
+  background: rgba(0, 0, 0, 0.14);
+}
+
+/* Desktop Landscape Layout */
+.desktop-preview {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+
+.desktop-menu-bar {
+  height: 24px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px;
+  color: var(--w3-color);
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.9;
+  z-index: 12;
+}
+
+.theme-editorial .desktop-menu-bar,
+.theme-swiss .desktop-menu-bar,
+.theme-vintage .desktop-menu-bar {
+  background: rgba(0, 0, 0, 0.04);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.desktop-menu-left,
+.desktop-menu-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.desktop-apple-logo {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.desktop-menu-item {
+  opacity: 0.85;
+}
+
+.desktop-dock-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 14px;
+  z-index: 12;
+}
+
+.desktop-dock {
+  height: 56px;
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+}
+
+.theme-editorial .desktop-dock,
+.theme-swiss .desktop-dock,
+.theme-vintage .desktop-dock {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+}
+
+.dock-app {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.dock-app:hover {
+  transform: translateY(-4px) scale(1.08);
+}
+
+.dock-app.finder {
+  background: linear-gradient(135deg, #5fc3e4 0%, #1579c4 100%);
+}
+.dock-app.safari {
+  background: radial-gradient(circle, #5fc3e4 0%, #e1578a 100%);
+  border-radius: 50%;
+}
+.dock-app.messages {
+  background: linear-gradient(135deg, #6ae06a 0%, #35af35 100%);
+}
+.dock-app.maps {
+  background: linear-gradient(135deg, #fcb045 0%, #fd1d1d 100%);
+}
+.dock-app.photos {
+  background: radial-gradient(circle, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+}
+.dock-app.music {
+  background: linear-gradient(135deg, #ff0844 0%, #ffb199 100%);
+}
+.dock-app.settings {
+  background: linear-gradient(135deg, #bdc3c7 0%, #2c3e50 100%);
+}
+
+/* Custom grid visibility utility */
+.paper-canvas.hide-grid .quote-cell {
+  border-right-color: transparent !important;
+  border-bottom-color: transparent !important;
+  border-right-style: none !important;
+  border-bottom-style: none !important;
+}
+

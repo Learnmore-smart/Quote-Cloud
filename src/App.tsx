@@ -2,16 +2,43 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ControlPanel } from './components/ControlPanel';
 import { PaperCanvas } from './components/PaperCanvas';
 import { QuoteManager } from './components/QuoteManager';
+import { ThemeModal } from './components/ThemeModal';
 import { assignScatter, shuffleQuotes } from './scatter';
 import { injectPrintRule } from './print';
 import { SEED_QUOTES, FAMOUS_QUOTES, SEED_QUOTES_ZH, FAMOUS_QUOTES_ZH } from './seed';
 import { getPaperCanvasSize } from './config';
-import type { PaperKey, Orientation, Quote } from './types';
+import type { PaperKey, Orientation, Quote, PosterTheme } from './types';
+import {
+  ThemeColors,
+  THEME_CONFIGS,
+  loadCustomColors,
+  saveCustomColors,
+  loadCustomFont,
+  saveCustomFont,
+  UserTheme,
+} from './themeConfig';
 
 import en from './locales/en.json';
 import zh from './locales/zh.json';
 
 import './styles.css';
+import './theme.css';
+
+
+
+
+
+
+function hexToRgb(hex: string): string {
+  const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+  const fullHex = hex.replace(shorthandRegex, (_, r, g, b) => r + r + g + g + b + b);
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(fullHex);
+  return result
+    ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
+    : '16, 185, 129';
+}
+
+
 
 const translations = { en, zh };
 
@@ -21,8 +48,72 @@ const STORAGE_KEY = 'quote-cloud-data';
 /** localStorage key for the persisted "show author" toggle. */
 const SHOW_AUTHOR_KEY = 'quote-cloud-show-author';
 
+/** localStorage key for the persisted "show grid" toggle. */
+const SHOW_GRID_KEY = 'quote-cloud-show-grid';
+
 /** localStorage key for the cached language. */
 const LANGUAGE_KEY = 'quote-cloud-lang';
+
+/** localStorage key for the persisted theme. */
+const THEME_KEY = 'quote-cloud-theme';
+
+/** localStorage key for the workspace mode (light/dark). */
+const WORKSPACE_MODE_KEY = 'quote-cloud-workspace-mode';
+
+const THEME_MODE_KEY = 'quote-cloud-theme-mode';
+
+/** Load the saved theme from localStorage (defaults to 'editorial'). */
+function loadTheme(): string {
+  if (typeof localStorage === 'undefined') return 'editorial';
+  try {
+    const cached = localStorage.getItem(THEME_KEY);
+    if (cached) return cached;
+  } catch {
+    /* fallback */
+  }
+  return 'editorial';
+}
+
+/** Load saved user custom themes from localStorage. */
+function loadUserThemes(): UserTheme[] {
+  if (typeof localStorage === 'undefined') return [];
+  try {
+    const cached = localStorage.getItem('quote-cloud-user-themes');
+    return cached ? JSON.parse(cached) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Load saved font override from localStorage. */
+function loadFontOverride(): string | null {
+  if (typeof localStorage === 'undefined') return null;
+  try {
+    return localStorage.getItem('quote-cloud-font-override');
+  } catch {
+    return null;
+  }
+}
+
+/** Load the saved workspace mode (dark/light). Legacy fallback. */
+function loadWorkspaceMode(): 'dark' | 'light' {
+  if (typeof localStorage === 'undefined') return 'dark';
+  try {
+    const cached = localStorage.getItem(WORKSPACE_MODE_KEY);
+    if (cached === 'dark' || cached === 'light') return cached;
+  } catch {}
+  return 'dark';
+}
+
+/** Load the poster theme mode (dark/light). Defaults to workspace mode or dark. */
+function loadThemeMode(): 'dark' | 'light' {
+  if (typeof localStorage === 'undefined') return 'dark';
+  try {
+    const cached = localStorage.getItem(THEME_MODE_KEY);
+    if (cached === 'dark' || cached === 'light') return cached;
+  } catch {}
+  return loadWorkspaceMode();
+}
 
 /** Load the saved "show author" toggle from localStorage (defaults to false). */
 function loadShowAuthor(): boolean {
@@ -34,16 +125,71 @@ function loadShowAuthor(): boolean {
   }
 }
 
+/** Load the saved custom theme name from localStorage. */
+function loadCustomThemeName(): string {
+  if (typeof localStorage === 'undefined') return '';
+  try {
+    return localStorage.getItem('quote-cloud-custom-theme-name') || '';
+  } catch {
+    return '';
+  }
+}
+
+/** Load the saved "show grid" toggle from localStorage (defaults to true). */
+function loadShowGrid(): boolean {
+  if (typeof localStorage === 'undefined') return true;
+  try {
+    return localStorage.getItem(SHOW_GRID_KEY) !== 'false';
+  } catch {
+    return true;
+  }
+}
+
+function loadMaskType(): 'none' | 'dark' | 'light' | 'gradient-dark' | 'gradient-light' | 'vignette' {
+  if (typeof localStorage === 'undefined') return 'none';
+  try {
+    const cached = localStorage.getItem('quote-cloud-mask-type');
+    if (
+      cached === 'none' ||
+      cached === 'dark' ||
+      cached === 'light' ||
+      cached === 'gradient-dark' ||
+      cached === 'gradient-light' ||
+      cached === 'vignette'
+    ) {
+      return cached as any;
+    }
+  } catch {}
+  return 'none';
+}
+
+function loadMaskOpacity(): number {
+  if (typeof localStorage === 'undefined') return 40;
+  try {
+    const cached = localStorage.getItem('quote-cloud-mask-opacity');
+    if (cached) {
+      const val = parseInt(cached, 10);
+      if (!isNaN(val)) return val;
+    }
+  } catch {}
+  return 40;
+}
+
+function loadShowPreviewOverlay(): boolean {
+  if (typeof localStorage === 'undefined') return false;
+  try {
+    return localStorage.getItem('quote-cloud-show-preview-overlay') === 'true';
+  } catch {}
+  return false;
+}
+
 /** Load the cached language or auto-detect browser language. */
 function loadLanguage(): 'en' | 'zh' {
   if (typeof localStorage !== 'undefined') {
     const cached = localStorage.getItem(LANGUAGE_KEY);
     if (cached === 'en' || cached === 'zh') return cached as 'en' | 'zh';
   }
-  if (typeof navigator !== 'undefined') {
-    return navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en';
-  }
-  return 'en';
+  return 'zh';
 }
 
 /** A fresh random seed — used to reshuffle the deck on demand. */
@@ -105,7 +251,20 @@ export default function App() {
   const [paper, setPaper] = useState<PaperKey>('A4');
   const [orientation, setOrientation] = useState<Orientation>('portrait');
   const [showAuthor, setShowAuthor] = useState(() => loadShowAuthor());
+  const [showGrid, setShowGrid] = useState(() => loadShowGrid());
+  const [customThemeName, setCustomThemeName] = useState<string>(() => loadCustomThemeName());
   const [lang, setLang] = useState<'en' | 'zh'>(() => loadLanguage());
+  const [theme, setTheme] = useState<PosterTheme>(() => loadTheme());
+  const [themeMode, setThemeMode] = useState<'dark' | 'light'>(() => loadThemeMode());
+  const [customColorsLight, setCustomColorsLight] = useState<ThemeColors>(() => loadCustomColors('light'));
+  const [customColorsDark, setCustomColorsDark] = useState<ThemeColors>(() => loadCustomColors('dark'));
+  const [customFont, setCustomFont] = useState<string>(() => loadCustomFont());
+  const [fontOverride, setFontOverride] = useState<string | null>(() => loadFontOverride());
+  const [userThemes, setUserThemes] = useState<UserTheme[]>(() => loadUserThemes());
+  const [themeModalOpen, setThemeModalOpen] = useState(false);
+  const [maskType, setMaskType] = useState<'none' | 'dark' | 'light' | 'gradient-dark' | 'gradient-light' | 'vignette'>(() => loadMaskType());
+  const [maskOpacity, setMaskOpacity] = useState<number>(() => loadMaskOpacity());
+  const [showPreviewOverlay, setShowPreviewOverlay] = useState<boolean>(() => loadShowPreviewOverlay());
 
   // Open-source ready: the deck lives in state, hydrated from localStorage so
   // user edits persist across reloads.
@@ -190,6 +349,13 @@ export default function App() {
     }
   }, [showAuthor]);
 
+  // Persist the "show grid" toggle so it survives a page refresh.
+  useEffect(() => {
+    try {
+      localStorage.setItem(SHOW_GRID_KEY, String(showGrid));
+    } catch {}
+  }, [showGrid]);
+
   // Persist language key to localStorage
   useEffect(() => {
     try {
@@ -198,6 +364,84 @@ export default function App() {
       /* storage full or unavailable */
     }
   }, [lang]);
+
+  // Persist theme to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      /* storage full or unavailable */
+    }
+  }, [theme]);
+
+
+
+  // Persist themeMode to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(THEME_MODE_KEY, themeMode);
+    } catch {
+      /* storage full or unavailable */
+    }
+  }, [themeMode]);
+
+  // Persist custom theme colors
+  useEffect(() => {
+    saveCustomColors(customColorsLight, 'light');
+  }, [customColorsLight]);
+
+  useEffect(() => {
+    saveCustomColors(customColorsDark, 'dark');
+  }, [customColorsDark]);
+
+  // Persist custom theme font
+  useEffect(() => {
+    saveCustomFont(customFont);
+  }, [customFont]);
+
+  // Persist font override
+  useEffect(() => {
+    try {
+      if (fontOverride) {
+        localStorage.setItem('quote-cloud-font-override', fontOverride);
+      } else {
+        localStorage.removeItem('quote-cloud-font-override');
+      }
+    } catch {}
+  }, [fontOverride]);
+
+  // Persist user custom themes
+  useEffect(() => {
+    try {
+      localStorage.setItem('quote-cloud-user-themes', JSON.stringify(userThemes));
+    } catch {}
+  }, [userThemes]);
+
+  // Persist custom theme name
+  useEffect(() => {
+    try {
+      localStorage.setItem('quote-cloud-custom-theme-name', customThemeName);
+    } catch {}
+  }, [customThemeName]);
+
+  // Persist wallpaper/mask configurations
+  useEffect(() => {
+    try {
+      localStorage.setItem('quote-cloud-mask-type', maskType);
+    } catch {}
+  }, [maskType]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('quote-cloud-mask-opacity', String(maskOpacity));
+    } catch {}
+  }, [maskOpacity]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('quote-cloud-show-preview-overlay', String(showPreviewOverlay));
+    } catch {}
+  }, [showPreviewOverlay]);
 
   // Language translation selector
   const t = useMemo(() => translations[lang], [lang]);
@@ -222,6 +466,12 @@ export default function App() {
     setManageOpen(false);
   }, [lang]);
 
+  // Load a preset deck of quotes
+  const handleLoadPreset = useCallback((presetQuotes: Quote[]) => {
+    setQuotes(presetQuotes);
+    setShuffleSeed(randomSeed());
+  }, []);
+
   // Append a new quote to the deck.
   const handleAddQuote = useCallback((quote: Quote) => {
     setQuotes((prev) => [...prev, quote]);
@@ -230,6 +480,11 @@ export default function App() {
   // Remove a quote by its index in the current deck.
   const handleDeleteQuote = useCallback((index: number) => {
     setQuotes((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  // Update a quote by its index in the current deck.
+  const handleUpdateQuote = useCallback((index: number, updatedQuote: Quote) => {
+    setQuotes((prev) => prev.map((q, i) => i === index ? updatedQuote : q));
   }, []);
 
   // Inject print rule on paper/orientation change
@@ -242,48 +497,212 @@ export default function App() {
     setTimeout(() => window.print(), 80);
   }, [paper, orientation]);
 
+  // Handle theme changes and reset font overrides for presets
+  const handleThemeChange = useCallback((newTheme: PosterTheme) => {
+    setTheme(newTheme);
+    if (newTheme !== 'custom') {
+      setFontOverride(null);
+    }
+  }, []);
+
+  const handleAddUserTheme = useCallback(() => {
+    let lightColors = { ...customColorsLight };
+    let darkColors = { ...customColorsDark };
+    let font = customFont;
+    let baseName = lang === 'zh' ? '自定义主题' : 'Custom Theme';
+
+    if (theme !== 'custom') {
+      const userTheme = userThemes.find(ut => ut.id === theme);
+      if (userTheme) {
+        lightColors = { ...userTheme.light };
+        darkColors = { ...userTheme.dark };
+        font = userTheme.fontFamily;
+        baseName = userTheme.name;
+      } else {
+        const cfg = THEME_CONFIGS[theme as Exclude<PosterTheme, 'custom'>];
+        if (cfg) {
+          lightColors = { ...cfg.light };
+          darkColors = { ...cfg.dark };
+          font = cfg.fontFamily;
+          baseName = lang === 'zh' ? cfg.nameZh : cfg.nameEn;
+        }
+      }
+    }
+
+    // Apply font override if active
+    const finalFont = fontOverride || font;
+
+    // Generate unique name suffix
+    const cleanBaseName = baseName.replace(/\s*\(.*?\)\s*$/, '').replace(/-\d+$/, '');
+    const count = userThemes.filter(ut => ut.name.startsWith(cleanBaseName)).length;
+    const nameSuffix = count > 0 ? `-${count + 1}` : '-1';
+    const newName = `${cleanBaseName}${nameSuffix}`;
+
+    const newTheme: UserTheme = {
+      id: `user-theme-${Date.now()}`,
+      name: newName,
+      fontFamily: finalFont,
+      light: lightColors,
+      dark: darkColors,
+    };
+
+    setUserThemes(prev => [...prev, newTheme]);
+    setTheme(newTheme.id);
+    setFontOverride(null); // Clear override as it is now baked into the theme
+  }, [theme, lang, customColorsLight, customColorsDark, customFont, fontOverride, userThemes]);
+
+  const handleDeleteUserTheme = useCallback((themeId: string) => {
+    setUserThemes(prev => prev.filter(ut => ut.id !== themeId));
+    if (theme === themeId) {
+      setTheme('editorial');
+      setFontOverride(null);
+    }
+  }, [theme]);
+
+  const activeColors = useMemo(() => {
+    if (theme === 'custom') {
+      return themeMode === 'dark' ? customColorsDark : customColorsLight;
+    }
+    const userTheme = userThemes.find(ut => ut.id === theme);
+    if (userTheme) {
+      return themeMode === 'dark' ? userTheme.dark : userTheme.light;
+    }
+    const cfg = THEME_CONFIGS[theme as Exclude<PosterTheme, 'custom'>];
+    if (!cfg) return themeMode === 'dark' ? customColorsDark : customColorsLight;
+    return themeMode === 'dark' ? cfg.dark : cfg.light;
+  }, [theme, themeMode, customColorsDark, customColorsLight, userThemes]);
+
+  const workspaceStyle = useMemo(() => {
+    const accentHex = activeColors.authorInk;
+    const accentRgb = hexToRgb(accentHex);
+    return {
+      '--accent-color': accentHex,
+      '--accent-color-rgb': accentRgb,
+      '--theme-paper-bg': activeColors.paperBg,
+      '--theme-w2-color': activeColors.w2Color,
+      '--theme-w3-color': activeColors.w3Color,
+    } as React.CSSProperties;
+  }, [activeColors]);
+
   return (
-    <>
-      <div className={`app orientation-${orientation}`}>
+    <div className={`workspace mode-${themeMode} theme-${theme}`} style={workspaceStyle}>
+      <div className="workspace-grid" />
+      <header className="workspace-header">
+        <div className="flex items-center gap-6">
+          <div className={`header-lang-switcher lang-${lang}`}>
+            <div className="slider" />
+            {(['zh', 'en'] as const).map((langCode) => {
+              const active = lang === langCode;
+              return (
+                <button
+                  key={langCode}
+                  type="button"
+                  onClick={() => handleLanguageChange(langCode)}
+                  className={`header-switcher-btn ${active ? 'active' : ''}`}
+                >
+                  {langCode === 'en' ? 'EN' : '中文'}
+                </button>
+              );
+            })}
+          </div>
+          <div className="logo">
+            {lang === 'zh' ? '语录云图' : 'QUOTE CLOUD'}
+            <span className="logo-sub">v1.0</span>
+          </div>
+        </div>
+      </header>
+      
+      <main className={`app-main orientation-${orientation}`}>
         <PaperCanvas
           canvasSize={canvasSize}
           previewScale={previewScale}
           items={items}
           showAuthor={showAuthor}
           loading={loading}
+          theme={theme}
+          themeMode={themeMode}
+          customColors={themeMode === 'dark' ? customColorsDark : customColorsLight}
+          customFont={customFont}
           composingText={t.loader.composing}
           signatureText={t.loader.signature}
+          maskType={maskType}
+          maskOpacity={maskOpacity}
+          showPreviewOverlay={showPreviewOverlay}
+          orientation={orientation}
+          currentLang={lang}
+          showGrid={showGrid}
+          userThemes={userThemes}
+          fontOverride={fontOverride}
         />
-      </div>
+      </main>
+
       <ControlPanel
         paper={paper}
         orientation={orientation}
         showAuthor={showAuthor}
+        theme={theme}
         onPaperChange={setPaper}
         onOrientationChange={setOrientation}
         onShowAuthorChange={setShowAuthor}
         onManageQuotes={() => setManageOpen(true)}
+        onOpenThemeModal={() => setThemeModalOpen(true)}
         onPrint={handlePrint}
         t={t}
         currentLang={lang}
-        onLanguageChange={handleLanguageChange}
+        maskType={maskType}
+        maskOpacity={maskOpacity}
+        showPreviewOverlay={showPreviewOverlay}
+        onMaskTypeChange={setMaskType}
+        onMaskOpacityChange={setMaskOpacity}
+        onShowPreviewOverlayChange={setShowPreviewOverlay}
+        customThemeName={customThemeName}
+        onShuffle={() => setShuffleSeed(randomSeed())}
       />
+
       <QuoteManager
         open={manageOpen}
         quotes={quotes}
         onClose={() => setManageOpen(false)}
         onAdd={handleAddQuote}
         onDelete={handleDeleteQuote}
+        onUpdate={handleUpdateQuote}
         onFeelLucky={handleFeelLucky}
+        onLoadPreset={handleLoadPreset}
         t={t}
+        currentLang={lang}
       />
-      <div className="signature">
-        {lang === 'zh' ? (
-          <>语录云图 · <span>AI</span> 智能排版引擎</>
-        ) : (
-          <>Quote Cloud · <span>AI</span> Layout Engine</>
-        )}
-      </div>
-    </>
+
+      <ThemeModal
+        open={themeModalOpen}
+        onClose={() => setThemeModalOpen(false)}
+        theme={theme}
+        onThemeChange={handleThemeChange}
+        themeMode={themeMode}
+        onThemeModeChange={setThemeMode}
+        customColors={themeMode === 'dark' ? customColorsDark : customColorsLight}
+        onCustomColorsChange={themeMode === 'dark' ? setCustomColorsDark : setCustomColorsLight}
+        customFont={customFont}
+        onCustomFontChange={setCustomFont}
+        currentLang={lang}
+        customThemeName={customThemeName}
+        onCustomThemeNameChange={setCustomThemeName}
+        showGrid={showGrid}
+        onShowGridChange={setShowGrid}
+        fontOverride={fontOverride}
+        onFontOverrideChange={setFontOverride}
+        userThemes={userThemes}
+        onAddUserTheme={handleAddUserTheme}
+        onDeleteUserTheme={handleDeleteUserTheme}
+        previewItems={items}
+      />
+
+      <footer className="workspace-footer">
+        <div className="footer-info">
+          <span>{paper} ({orientation === 'portrait' ? (lang === 'zh' ? '纵向' : 'Portrait') : (lang === 'zh' ? '横向' : 'Landscape')})</span>
+          <span className="separator">•</span>
+          <span>{canvasSize.w} × {canvasSize.h} px</span>
+        </div>
+      </footer>
+    </div>
   );
 }
