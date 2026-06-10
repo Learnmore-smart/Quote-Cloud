@@ -33,6 +33,8 @@ export function PaperCanvas({
   // Tile the flat quote list into the rigid full-bleed mosaic.
   const rows = useMemo(() => packRows(items), [items]);
 
+  const totalFlex = useMemo(() => rows.reduce((sum, r) => sum + r.flex, 0), [rows]);
+
   const canvasStyle: CSSProperties = {
     width: `${canvasSize.w}px`,
     height: `${canvasSize.h}px`,
@@ -54,56 +56,65 @@ export function PaperCanvas({
           style={canvasStyle}
         >
           <div className="scatter-field">
-            {rows.map((row, rowIndex) => (
-              <div
-                className="quote-row"
-                key={`row-${rowIndex}`}
-                style={{ flexGrow: row.flex, flexShrink: 1, flexBasis: 0 }}
-              >
-                {row.cells.map((cell, cellIndex) => {
-                  // --- 2D checkerboard contrast --------------------------
-                  // Bold must ONLY ever touch light, both horizontally and
-                  // vertically. A manual `quote.weight` ('bold' | 'light')
-                  // wins; otherwise parity of (rowIndex + cellIndex) decides.
-                  // The Hero ignores all of this and keeps its exclusive look.
-                  const { item } = cell;
-                  const manual = item.quote.weight;
-                  const isBold = item.isHero
-                    ? true
-                    : manual === 'bold' || manual === 'hero'
+            {rows.map((row, rowIndex) => {
+              const pct = totalFlex > 0 ? (row.flex / totalFlex) * 100 : 0;
+              return (
+                <div
+                  className="quote-row"
+                  key={`row-${rowIndex}`}
+                  style={{
+                    flexGrow: row.flex,
+                    flexShrink: 1,
+                    flexBasis: `${pct}%`,
+                    height: `${pct}%`,
+                  }}
+                >
+                  {row.cells.map((cell, cellIndex) => {
+                    // --- 2D checkerboard contrast --------------------------
+                    // Bold must ONLY ever touch light, both horizontally and
+                    // vertically. A manual `quote.weight` ('bold' | 'light')
+                    // wins; otherwise parity of (rowIndex + cellIndex) decides.
+                    // The Hero ignores all of this and keeps its exclusive look.
+                    const { item } = cell;
+                    const manual = item.quote.weight;
+                    const isBold = item.isHero
                       ? true
-                      : manual === 'light'
-                        ? false
-                        : (rowIndex + cellIndex) % 2 === 0;
+                      : manual === 'bold' || manual === 'hero'
+                        ? true
+                        : manual === 'light'
+                          ? false
+                          : (rowIndex + cellIndex) % 2 === 0;
 
-                  // A bold box claims 2× the width of a light box; since the
-                  // text auto-fits its box, the bold quote renders far larger.
-                  const flex = item.isHero ? 1 : isBold ? 2 : 1;
+                    // A bold box claims 2× the width of a light box; since the
+                    // text auto-fits its box, the bold quote renders far larger.
+                    const flex = item.isHero ? 1 : isBold ? 2 : 1;
 
-                  // Elastic line-height: line-height is the vertical spring
-                  // that lets blocks of wildly different size/weight sit flush.
-                  // A bold box compresses to a dense brick (0.95); a light box
-                  // expands airily (1.6) so its small text stretches to fill
-                  // the cell height of its heavy neighbours.
-                  const resolvedItem: ScatterItem = item.isHero
-                    ? item
-                    : {
-                        ...item,
-                        fontWeight: isBold ? 900 : 300,
-                        lineHeight: isBold ? 0.95 : 1.6,
-                      };
+                    // Elastic line-height: line-height is the vertical spring
+                    // that lets blocks of wildly different size/weight sit flush.
+                    // A bold box compresses to a dense brick (0.95); a light box
+                    // expands airily (1.6) so its small text stretches to fill
+                    // the cell height of its heavy neighbours.
+                    const resolvedItem: ScatterItem = item.isHero
+                      ? item
+                      : {
+                          ...item,
+                          fontWeight: isBold ? 900 : 300,
+                          lineHeight: isBold ? 0.95 : 1.6,
+                        };
 
-                  return (
-                    <AutoFitQuote
-                      key={`${item.quote.author}-${rowIndex}-${cellIndex}`}
-                      item={resolvedItem}
-                      flex={flex}
-                      showAuthor={showAuthor}
-                    />
-                  );
-                })}
-              </div>
-            ))}
+                    return (
+                      <AutoFitQuote
+                        key={`${item.quote.author}-${rowIndex}-${cellIndex}`}
+                        item={resolvedItem}
+                        flex={flex}
+                        showAuthor={showAuthor}
+                        loading={loading}
+                      />
+                    );
+                  })}
+                </div>
+              );
+            })}
           </div>
           <Loader loading={loading} />
         </div>

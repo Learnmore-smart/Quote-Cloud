@@ -7,6 +7,7 @@ interface AutoFitQuoteProps {
   /** Horizontal flex-grow weight inside its row. */
   flex: number;
   showAuthor: boolean;
+  loading: boolean;
 }
 
 /* =============================================================================
@@ -27,7 +28,7 @@ const MAX_FONT = 200;
 /** Stop the search once the window is tighter than this (px). */
 const PRECISION = 0.4;
 
-export function AutoFitQuote({ item, flex, showAuthor }: AutoFitQuoteProps) {
+export function AutoFitQuote({ item, flex, showAuthor, loading }: AutoFitQuoteProps) {
   const { quote, isHero, fontWeight, lineHeight, uppercase } = item;
 
   const cellRef = useRef<HTMLDivElement>(null);
@@ -80,7 +81,7 @@ export function AutoFitQuote({ item, flex, showAuthor }: AutoFitQuoteProps) {
     const observer = new ResizeObserver(() => fit());
     observer.observe(cell);
     return () => observer.disconnect();
-  }, [quote.text, quote.author, showAuthor, fontWeight, lineHeight, uppercase]);
+  }, [quote.text, quote.author, showAuthor, fontWeight, lineHeight, uppercase, loading]);
 
   const cellStyle: CSSProperties = {
     flexGrow: flex,
