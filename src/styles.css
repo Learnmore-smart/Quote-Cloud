@@ -42,6 +42,31 @@ input {
   letter-spacing: 0;
 }
 
+/* Native <select> dropdown popup styling */
+select {
+  color-scheme: light;
+}
+
+select option {
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #262626; /* neutral-800 */
+  background-color: #ffffff;
+}
+
+select option:hover,
+select option:focus,
+select option:checked {
+  color: #ffffff;
+  background-color: #171717; /* neutral-900 */
+}
+
+/* Highlight the active option using the accent color on supporting browsers */
+select {
+  accent-color: #171717;
+}
+
 .app {
   position: fixed;
   inset: 0;
