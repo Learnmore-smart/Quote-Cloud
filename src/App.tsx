@@ -1,14 +1,18 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ControlPanel } from './components/ControlPanel';
 import { PaperCanvas } from './components/PaperCanvas';
-import { assignScatter } from './scatter';
+import { assignScatter, shuffleQuotes } from './scatter';
 import { injectPrintRule } from './print';
-import { fetchWeights } from './weights';
-import { SEED_QUOTES } from './seed';
+import { SEED_QUOTES, FAMOUS_QUOTES } from './seed';
 import { getPaperCanvasSize } from './config';
 import type { PaperKey, Orientation, Quote } from './types';
 
 import './styles.css';
+
+/** A fresh random seed — used to reshuffle the deck on demand. */
+function randomSeed(): number {
+  return Math.floor(Math.random() * 0x7fffffff);
+}
 
 function computePreviewScale(
   canvasW: number,
@@ -38,7 +42,11 @@ export default function App() {
   const [paper, setPaper] = useState<PaperKey>('A4');
   const [orientation, setOrientation] = useState<Orientation>('portrait');
   const [showAuthor, setShowAuthor] = useState(false);
-  const [quotes, setQuotes] = useState<Quote[]>([]);
+  // Open-source ready: the deck lives in state so external inputs (or the
+  // "I Feel Lucky" button) can swap it out and trigger a fresh layout.
+  const [quotes, setQuotes] = useState<Quote[]>(SEED_QUOTES);
+  // A per-mount random seed makes the layout look different on every refresh.
+  const [shuffleSeed, setShuffleSeed] = useState<number>(() => randomSeed());
   const [loading, setLoading] = useState(true);
   const [viewportSize, setViewportSize] = useState({
     w: typeof window !== 'undefined' ? window.innerWidth : 1280,
@@ -69,26 +77,18 @@ export default function App() {
     [canvasSize.h, canvasSize.w, viewportSize.h, viewportSize.w],
   );
 
-  // Fetch weights — must wait for fonts to load first so the
-  // very first layout pass uses the final font metrics.
+  // Wait for fonts before the first auto-fit pass so the binary search measures
+  // final glyph widths. (Weighting is now manual via `quote.weight` + the 2D
+  // checkerboard, so there's no async ranking step anymore.)
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      // 1. Wait for fonts BEFORE measuring anything
       await waitForFonts();
       if (cancelled) return;
-      // 2. Tiny breathing room so the loading state is visible
+      // Tiny breathing room so the loading state is visible.
       await new Promise((r) => setTimeout(r, 250));
-      // 3. Fetch AI weights (or fall back to local heuristic)
-      const { data } = await fetchWeights(SEED_QUOTES);
       if (cancelled) return;
-      const sanitized = data.map((q) => {
-        const w = q.weight;
-        const safe: 1 | 2 | 3 = w === 1 || w === 2 || w === 3 ? w : 2;
-        return { ...q, weight: safe };
-      });
-      setQuotes(sanitized);
       setLoading(false);
     })();
     return () => {
@@ -96,10 +96,21 @@ export default function App() {
     };
   }, []);
 
-  // Assign semantic cloud styles (loudness, ragged widths / alignments).
-  // The actual font scaling now happens inside PaperCanvas via a measured
-  // binary-search auto-fit pass, so no estimate is needed here.
-  const items = useMemo(() => assignScatter(quotes), [quotes]);
+  // Reshuffle whenever the deck or the seed changes (stable for one seed).
+  const shuffledQuotes = useMemo(
+    () => shuffleQuotes(quotes, shuffleSeed),
+    [quotes, shuffleSeed],
+  );
+
+  // Assign semantic cloud styles. The Hero is surgically re-centred by
+  // `packRows` after the shuffle; per-cell bold/light is resolved at render.
+  const items = useMemo(() => assignScatter(shuffledQuotes), [shuffledQuotes]);
+
+  // "I Feel Lucky" — swap in a fresh deck of famous quotes and reshuffle.
+  const handleFeelLucky = useCallback(() => {
+    setQuotes(FAMOUS_QUOTES);
+    setShuffleSeed(randomSeed());
+  }, []);
 
   // Inject print rule on paper/orientation change
   useEffect(() => {
@@ -129,6 +140,7 @@ export default function App() {
         onPaperChange={setPaper}
         onOrientationChange={setOrientation}
         onShowAuthorChange={setShowAuthor}
+        onFeelLucky={handleFeelLucky}
         onPrint={handlePrint}
       />
       <div className="signature">

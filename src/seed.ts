@@ -2,7 +2,7 @@ import type { Quote } from './types';
 
 /** Initial dataset of quotes. */
 export const SEED_QUOTES: Quote[] = [
-  { text: "Building LearnX itself, creating a structured plan to build it, the architecture, frontend design. It's way ahead of most people. All in all, if you're useless, then idk what other, less productive people are", author: 'Yu He Wang' },
+  { text: "Building LearnX itself, creating a structured plan to build it, the architecture, frontend design. It's way ahead of most people. All in all, if you're useless, then idk what other, less productive people are", author: 'Yu He Wang', weight: 'hero' },
   { author: '立正课代表', text: '17岁能做到这些，不管结果如何，你已经比绝大多数人强了。不是因为你做的东西多牛，而是因为你真的动手了，而且失败了还在继续。这个品质比任何技术栈都值钱。' },
   { author: '立正课代表', text: '你花了9个月做产品，3个月做宣传片，但你花了多少时间"卖"？' },
   { author: '立正课代表', text: '年轻 builder 最大的风险不是失败，而是一直在‘做’，却从来没真正‘卖’。' },
@@ -18,4 +18,20 @@ export const SEED_QUOTES: Quote[] = [
   { author: 'Thomas Yuen', text: '现在每一个小点，十年过后，再回头看已连成一条线。加油！' },
   { author: '八娥夨',      text: '自律很难的，希望你能坚持下去。' },
   { author: 'Kino',        text: '这个产品视频是你一个人做的吗，做的真好！' },
+];
+
+/**
+ * "I Feel Lucky" deck — a swap-in set of famous historical quotes. One entry is
+ * tagged `weight: 'hero'` so it lands in the exclusive centre row; the rest fall
+ * back to the 2D checkerboard contrast logic.
+ */
+export const FAMOUS_QUOTES: Quote[] = [
+  { text: 'The only way to do great work is to love what you do.', author: 'Steve Jobs', weight: 'hero' },
+  { text: 'Stay hungry, stay foolish.', author: 'Steve Jobs' },
+  { text: 'Imagination is more important than knowledge.', author: 'Albert Einstein' },
+  { text: 'The unexamined life is not worth living.', author: 'Socrates' },
+  { text: 'That which does not kill us makes us stronger.', author: 'Friedrich Nietzsche' },
+  { text: 'I think, therefore I am.', author: 'René Descartes' },
+  { text: 'In the middle of difficulty lies opportunity.', author: 'Albert Einstein' },
+  { text: 'Simplicity is the ultimate sophistication.', author: 'Leonardo da Vinci' },
 ];
