@@ -118,7 +118,7 @@ export function AutoFitQuote({ item, flex, showAuthor }: AutoFitQuoteProps) {
       >
         {quote.text}
         {showAuthor && quote.author && (
-          <span className="author-name font-light italic text-[0.8em] whitespace-nowrap">
+          <span className="opacity-80 whitespace-nowrap">
             {' '}— {quote.author}
           </span>
         )}

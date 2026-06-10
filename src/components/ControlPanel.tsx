@@ -7,7 +7,7 @@ interface ControlPanelProps {
   onPaperChange: (paper: PaperKey) => void;
   onOrientationChange: (orient: Orientation) => void;
   onShowAuthorChange: (show: boolean) => void;
-  onFeelLucky: () => void;
+  onManageQuotes: () => void;
   onPrint: () => void;
 }
 
@@ -34,7 +34,7 @@ export function ControlPanel({
   onPaperChange,
   onOrientationChange,
   onShowAuthorChange,
-  onFeelLucky,
+  onManageQuotes,
   onPrint,
 }: ControlPanelProps) {
   return (
@@ -144,14 +144,14 @@ export function ControlPanel({
         </button>
       </div>
 
-      {/* I Feel Lucky */}
+      {/* Manage Quotes */}
       <button
         type="button"
-        onClick={onFeelLucky}
+        onClick={onManageQuotes}
         className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white py-2.5 text-sm font-semibold text-neutral-800 shadow-sm transition hover:border-neutral-300 hover:bg-neutral-50 active:scale-[0.98]"
       >
         <svg
-          className="h-4 w-4 text-amber-500"
+          className="h-4 w-4 text-neutral-500"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -159,9 +159,9 @@ export function ControlPanel({
           strokeLinecap="round"
           strokeLinejoin="round"
         >
-          <path d="M12 3l2.09 4.26L19 8l-3.5 3.4.83 4.85L12 14l-4.33 2.25L8.5 11.4 5 8l4.91-.74z" />
+          <path d="M4 6h16M4 12h16M4 18h10" />
         </svg>
-        I Feel Lucky
+        Manage Quotes
       </button>
 
       {/* Print */}

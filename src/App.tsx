@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ControlPanel } from './components/ControlPanel';
 import { PaperCanvas } from './components/PaperCanvas';
+import { QuoteManager } from './components/QuoteManager';
 import { assignScatter, shuffleQuotes } from './scatter';
 import { injectPrintRule } from './print';
 import { SEED_QUOTES, FAMOUS_QUOTES } from './seed';
@@ -9,9 +10,38 @@ import type { PaperKey, Orientation, Quote } from './types';
 
 import './styles.css';
 
+/** localStorage key for the persisted deck. */
+const STORAGE_KEY = 'quote-cloud-data';
+
 /** A fresh random seed — used to reshuffle the deck on demand. */
 function randomSeed(): number {
   return Math.floor(Math.random() * 0x7fffffff);
+}
+
+/** A value is a usable quote if it at least carries text + author strings. */
+function isQuote(value: unknown): value is Quote {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as Quote).text === 'string' &&
+    typeof (value as Quote).author === 'string'
+  );
+}
+
+/** Load the saved deck from localStorage, falling back to the seed dataset. */
+function loadQuotes(): Quote[] {
+  if (typeof localStorage === 'undefined') return SEED_QUOTES;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return SEED_QUOTES;
+    const parsed: unknown = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.every(isQuote)) {
+      return parsed as Quote[];
+    }
+  } catch {
+    /* corrupt payload — fall through to the seed dataset */
+  }
+  return SEED_QUOTES;
 }
 
 function computePreviewScale(
@@ -42,11 +72,12 @@ export default function App() {
   const [paper, setPaper] = useState<PaperKey>('A4');
   const [orientation, setOrientation] = useState<Orientation>('portrait');
   const [showAuthor, setShowAuthor] = useState(false);
-  // Open-source ready: the deck lives in state so external inputs (or the
-  // "I Feel Lucky" button) can swap it out and trigger a fresh layout.
-  const [quotes, setQuotes] = useState<Quote[]>(SEED_QUOTES);
+  // Open-source ready: the deck lives in state, hydrated from localStorage so
+  // user edits persist across reloads.
+  const [quotes, setQuotes] = useState<Quote[]>(() => loadQuotes());
   // A per-mount random seed makes the layout look different on every refresh.
   const [shuffleSeed, setShuffleSeed] = useState<number>(() => randomSeed());
+  const [manageOpen, setManageOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [viewportSize, setViewportSize] = useState({
     w: typeof window !== 'undefined' ? window.innerWidth : 1280,
@@ -106,10 +137,30 @@ export default function App() {
   // `packRows` after the shuffle; per-cell bold/light is resolved at render.
   const items = useMemo(() => assignScatter(shuffledQuotes), [shuffledQuotes]);
 
-  // "I Feel Lucky" — swap in a fresh deck of famous quotes and reshuffle.
+  // Persist the deck to localStorage whenever it changes.
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(quotes));
+    } catch {
+      /* storage full or unavailable — keep running with in-memory state */
+    }
+  }, [quotes]);
+
+  // "I Feel Lucky" — swap in a fresh deck of famous quotes, reshuffle, close.
   const handleFeelLucky = useCallback(() => {
     setQuotes(FAMOUS_QUOTES);
     setShuffleSeed(randomSeed());
+    setManageOpen(false);
+  }, []);
+
+  // Append a new quote to the deck.
+  const handleAddQuote = useCallback((quote: Quote) => {
+    setQuotes((prev) => [...prev, quote]);
+  }, []);
+
+  // Remove a quote by its index in the current deck.
+  const handleDeleteQuote = useCallback((index: number) => {
+    setQuotes((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
   // Inject print rule on paper/orientation change
@@ -140,8 +191,16 @@ export default function App() {
         onPaperChange={setPaper}
         onOrientationChange={setOrientation}
         onShowAuthorChange={setShowAuthor}
-        onFeelLucky={handleFeelLucky}
+        onManageQuotes={() => setManageOpen(true)}
         onPrint={handlePrint}
+      />
+      <QuoteManager
+        open={manageOpen}
+        quotes={quotes}
+        onClose={() => setManageOpen(false)}
+        onAdd={handleAddQuote}
+        onDelete={handleDeleteQuote}
+        onFeelLucky={handleFeelLucky}
       />
       <div className="signature">
         Quote Cloud · <span>AI</span> Layout Engine

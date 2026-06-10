@@ -70,7 +70,7 @@ export function PaperCanvas({
                   const manual = item.quote.weight;
                   const isBold = item.isHero
                     ? true
-                    : manual === 'bold'
+                    : manual === 'bold' || manual === 'hero'
                       ? true
                       : manual === 'light'
                         ? false
@@ -80,12 +80,17 @@ export function PaperCanvas({
                   // text auto-fits its box, the bold quote renders far larger.
                   const flex = item.isHero ? 1 : isBold ? 2 : 1;
 
+                  // Elastic line-height: line-height is the vertical spring
+                  // that lets blocks of wildly different size/weight sit flush.
+                  // A bold box compresses to a dense brick (0.95); a light box
+                  // expands airily (1.6) so its small text stretches to fill
+                  // the cell height of its heavy neighbours.
                   const resolvedItem: ScatterItem = item.isHero
                     ? item
                     : {
                         ...item,
                         fontWeight: isBold ? 900 : 300,
-                        lineHeight: isBold ? 1.05 : 1.1,
+                        lineHeight: isBold ? 0.95 : 1.6,
                       };
 
                   return (
