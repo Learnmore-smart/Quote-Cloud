@@ -244,7 +244,7 @@ export default function App() {
 
   return (
     <>
-      <div className="app">
+      <div className={`app orientation-${orientation}`}>
         <PaperCanvas
           canvasSize={canvasSize}
           previewScale={previewScale}

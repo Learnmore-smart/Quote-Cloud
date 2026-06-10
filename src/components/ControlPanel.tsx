@@ -46,7 +46,7 @@ export function ControlPanel({
   return (
     <aside
       id="controls"
-      className="controls fixed right-5 top-5 z-50 w-72 select-none rounded-2xl border border-white/60 bg-white/75 p-5 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.35)] ring-1 ring-black/5 backdrop-blur-xl opacity-20 hover:opacity-100 transition-opacity duration-300 ease-in-out [font-family:Inter,ui-sans-serif,system-ui,sans-serif]"
+      className="controls fixed right-5 top-5 z-50 w-72 select-none rounded-2xl border border-white/60 bg-white/75 p-5 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.35)] ring-1 ring-black/5 backdrop-blur-xl [font-family:Inter,ui-sans-serif,system-ui,sans-serif]"
     >
       {/* Portfolio Links */}
       <div className="mb-4 flex items-center justify-between border-b border-neutral-200/50 pb-3">
