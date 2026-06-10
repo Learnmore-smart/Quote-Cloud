@@ -207,19 +207,6 @@ export function ThemeModal({
     return cfg ? cfg.fontFamily : 'inherit';
   }, [theme, customFont, fontOverride, userThemes]);
 
-  const borderStyle = useMemo(() => {
-    if (!showGrid) return 'none';
-    if (theme === 'mono') return 'dashed';
-    if (['editorial', 'midnight', 'vintage', 'forest', 'lavender'].includes(theme)) return 'none';
-    return 'solid';
-  }, [theme, showGrid]);
-
-  const borderWidth = useMemo(() => {
-    if (theme === 'cyberpunk') return '2px';
-    if (['editorial', 'midnight', 'vintage', 'forest', 'lavender'].includes(theme)) return '0px';
-    return '1px';
-  }, [theme]);
-
   if (!open) return null;
 
   return (
