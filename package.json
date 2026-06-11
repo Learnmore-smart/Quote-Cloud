@@ -1,7 +1,7 @@
 {
   "name": "quote-cloud",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
   "description": "AI 排版海报生成器 (Quote Cloud · AI Layout Studio)",
   "scripts": {
@@ -24,6 +24,8 @@
   "dependencies": {
     "@chenglou/pretext": "^0.0.7",
     "d3-cloud": "^1.2.9",
+    "html-to-image": "^1.11.13",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.17.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"

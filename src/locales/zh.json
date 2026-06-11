@@ -12,6 +12,7 @@
     "showGridDesc": "在卡片之间显示分割边框",
     "manageQuotes": "管理语录",
     "printPoster": "打印海报",
+    "exportPoster": "导出与打印",
     "language": "语言切换",
     "theme": "视觉主题",
     "themes": {
@@ -128,5 +129,22 @@
   "loader": {
     "composing": "智能排版中",
     "signature": "语录云图 · 自动布局"
+  },
+  "exportModal": {
+    "title": "导出与打印海报",
+    "subtitle": "请选择以下格式保存或打印您的海报。",
+    "pngTitle": "PNG 高清图片",
+    "pngDesc": "无损格式 capture，适合社交网络或移动端分享",
+    "pngAction": "下载 PNG",
+    "jpgTitle": "JPEG 图片",
+    "jpgDesc": "优化文件大小，标准兼容性佳",
+    "jpgAction": "下载 JPEG",
+    "pdfTitle": "PDF 电子文档",
+    "pdfDesc": "适合物理打印，包含高保真图层",
+    "pdfAction": "下载 PDF",
+    "printTitle": "系统级打印 / PDF",
+    "printDesc": "打开浏览器打印窗口，可直接打印或另存为 PDF",
+    "printAction": "进入打印",
+    "generating": "生成中..."
   }
 }

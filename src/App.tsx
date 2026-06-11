@@ -3,6 +3,7 @@ import { ControlPanel } from './components/ControlPanel';
 import { PaperCanvas } from './components/PaperCanvas';
 import { QuoteManager } from './components/QuoteManager';
 import { ThemeModal } from './components/ThemeModal';
+import { ExportModal } from './components/ExportModal';
 import { assignScatter, shuffleQuotes } from './scatter';
 import { injectPrintRule } from './print';
 import { SEED_QUOTES, FAMOUS_QUOTES, SEED_QUOTES_ZH, FAMOUS_QUOTES_ZH } from './seed';
@@ -262,6 +263,7 @@ export default function App() {
   const [fontOverride, setFontOverride] = useState<string | null>(() => loadFontOverride());
   const [userThemes, setUserThemes] = useState<UserTheme[]>(() => loadUserThemes());
   const [themeModalOpen, setThemeModalOpen] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const [maskType, setMaskType] = useState<'none' | 'dark' | 'light' | 'gradient-dark' | 'gradient-light' | 'vignette'>(() => loadMaskType());
   const [maskOpacity, setMaskOpacity] = useState<number>(() => loadMaskOpacity());
   const [showPreviewOverlay, setShowPreviewOverlay] = useState<boolean>(() => loadShowPreviewOverlay());
@@ -607,7 +609,7 @@ export default function App() {
           </div>
           <div className="logo">
             {lang === 'zh' ? '语录云图' : 'QUOTE CLOUD'}
-            <span className="logo-sub">v1.0</span>
+            <span className="logo-sub">v2.0</span>
           </div>
         </div>
       </header>
@@ -646,7 +648,7 @@ export default function App() {
         onShowAuthorChange={setShowAuthor}
         onManageQuotes={() => setManageOpen(true)}
         onOpenThemeModal={() => setThemeModalOpen(true)}
-        onPrint={handlePrint}
+        onOpenExportModal={() => setExportModalOpen(true)}
         t={t}
         currentLang={lang}
         maskType={maskType}
@@ -694,6 +696,18 @@ export default function App() {
         onAddUserTheme={handleAddUserTheme}
         onDeleteUserTheme={handleDeleteUserTheme}
         previewItems={items}
+      />
+
+      <ExportModal
+        open={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        canvasSize={canvasSize}
+        orientation={orientation}
+        paper={paper}
+        themeMode={themeMode}
+        currentLang={lang}
+        t={t}
+        onPrint={handlePrint}
       />
 
       <footer className="workspace-footer">

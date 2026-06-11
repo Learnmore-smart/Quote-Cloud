@@ -12,6 +12,7 @@
     "showGridDesc": "Show split borders between cells",
     "manageQuotes": "Manage Quotes",
     "printPoster": "Print Poster",
+    "exportPoster": "Export / Print",
     "language": "Language",
     "theme": "Visual Theme",
     "themes": {
@@ -128,5 +129,22 @@
   "loader": {
     "composing": "Composing",
     "signature": "Quote Cloud · AI Layout"
+  },
+  "exportModal": {
+    "title": "Export Poster",
+    "subtitle": "Select a format below to save or print your poster.",
+    "pngTitle": "PNG Image",
+    "pngDesc": "Lossless layout capture, best for social media sharing",
+    "pngAction": "Download PNG",
+    "jpgTitle": "JPEG Image",
+    "jpgDesc": "Standard image format, optimized file size",
+    "jpgAction": "Download JPEG",
+    "pdfTitle": "PDF Document",
+    "pdfDesc": "High-fidelity document layout, best for printing",
+    "pdfAction": "Download PDF",
+    "printTitle": "Browser Print",
+    "printDesc": "Open system print window to select a printer or save as PDF",
+    "printAction": "Print Poster",
+    "generating": "Generating..."
   }
 }

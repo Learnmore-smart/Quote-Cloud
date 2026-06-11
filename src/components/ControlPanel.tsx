@@ -13,7 +13,7 @@ interface ControlPanelProps {
   onShowAuthorChange: (show: boolean) => void;
   onManageQuotes: () => void;
   onOpenThemeModal: () => void;
-  onPrint: () => void;
+  onOpenExportModal: () => void;
   t: any;
   currentLang: 'en' | 'zh';
   maskType: 'none' | 'dark' | 'light' | 'gradient-dark' | 'gradient-light' | 'vignette';
@@ -52,7 +52,7 @@ export function ControlPanel({
   onShowAuthorChange,
   onManageQuotes,
   onOpenThemeModal,
-  onPrint,
+  onOpenExportModal,
   t,
   currentLang,
   maskType,
@@ -312,10 +312,10 @@ export function ControlPanel({
       {/* Action Buttons */}
       <div className="flex flex-col gap-2">
 
-        {/* Print */}
+        {/* Export & Print */}
         <button
           type="button"
-          onClick={onPrint}
+          onClick={onOpenExportModal}
           style={{
             backgroundColor: `var(--accent-color)`,
             color: `var(--theme-paper-bg)`,
@@ -332,11 +332,11 @@ export function ControlPanel({
             strokeLinecap="round"
             strokeLinejoin="round"
           >
-            <path d="M6 9V2h12v7" />
-            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-            <path d="M6 14h12v8H6z" />
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
           </svg>
-          {t.controlPanel.printPoster}
+          {t.controlPanel.exportPoster}
         </button>
       </div>
     </aside>
