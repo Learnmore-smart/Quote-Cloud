@@ -265,7 +265,7 @@ export function QuoteManager({
   currentLang,
 }: QuoteManagerProps) {
   // Tabs & Modes
-  const [tab, setTab] = useState<'manual' | 'ai'>('manual');
+  const [tab, setTab] = useState<'manual' | 'import' | 'ai'>('manual');
   const [aiMode, setAiMode] = useState<'generate' | 'extract'>('generate');
   const [showConfirmClear, setShowConfirmClear] = useState(false);
 
@@ -284,7 +284,9 @@ export function QuoteManager({
   // AI Extractor state
   const [extractText, setExtractText] = useState('');
   const [extractLoading, setExtractLoading] = useState(false);
-  const [isClipboardExtract, setIsClipboardExtract] = useState(false);
+
+  // Batch Import state
+  const [importText, setImportText] = useState('');
 
   // AI Polish state
   const [polishLoading, setPolishLoading] = useState(false);
@@ -376,20 +378,19 @@ Requirements:
   };
 
   // AI Extract logic
-  const handleAiExtract = async (textToExtract?: string) => {
-    const targetText = textToExtract !== undefined ? textToExtract : extractText;
-    if (!targetText.trim()) return;
+  const handleAiExtract = async () => {
+    if (!extractText.trim()) return;
     setExtractLoading(true);
     try {
-      const systemMessage = `You are an expert quote extractor. Scan the text provided by the user and extract ALL quotes/sentences.
+      const systemMessage = `You are an expert quote extractor. Scan the text provided by the user and extract the most punchy, meaningful, and layout-friendly quotes/sentences.
 Requirements:
 1. Output MUST be a valid JSON array of objects. No markdown wrapper, no trailing text, just raw JSON.
 2. Structure: [{"text": "Quote here", "author": "Author name"}]
-3. Extract EVERY single quote present in the input text. Do not omit, summarize, or skip any quotes. If the text consists of multiple quotes separated by newlines or markers, extract all of them.
-4. Infer the author from the context (e.g., if there's " — author" or "by author", parse it). If the author is unknown or not mentioned, try to specify a descriptive origin or source (e.g., "Internet Saying", "Traditional Proverb", "Book Excerpt") rather than defaulting to generic "Anonymous" or "Unknown".
+3. Infer the author from the context. If the author is unknown or not mentioned, try to specify a descriptive origin or source (e.g., "Internet Saying", "Traditional Proverb", "Book Excerpt") rather than defaulting to generic "Anonymous" or "Unknown".
+4. Keep the quotes concise and powerful.
 5. The extracted quotes should be in their original language.`;
 
-      const userMessage = `Extract quotes from the following text:\n\n${targetText}`;
+      const userMessage = `Extract quotes from the following text:\n\n${extractText}`;
 
       const rawResult = await fetchFromOpenRouter([
         { role: 'system', content: systemMessage },
@@ -414,22 +415,48 @@ Requirements:
     }
   };
 
-  // Clipboard extract helper
-  const handleAiExtractClipboard = async () => {
+  // Local list parser
+  const parseLocalList = (rawText: string) => {
+    const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const items: SuggestionItem[] = lines.map((line, idx) => {
+      const parts = line.split(/[-——~～]/);
+      let quoteText = line;
+      let authorText = currentLang === 'zh' ? '无名氏' : 'Unknown';
+      
+      if (parts.length > 1) {
+        authorText = parts[parts.length - 1].trim();
+        quoteText = parts.slice(0, -1).join('-').trim();
+      }
+      
+      // Clean quotes
+      quoteText = quoteText.replace(/^["'“「]|["'”占]$/g, '').trim();
+      authorText = authorText.replace(/^["'“「]|["'”占]$/g, '').trim();
+
+      return {
+        id: `import-${idx}-${Date.now()}`,
+        text: quoteText,
+        author: authorText || (currentLang === 'zh' ? '无名氏' : 'Unknown'),
+        weight: 'auto',
+        added: false,
+        checked: true,
+      };
+    });
+    setSuggestions(items);
+  };
+
+  // Clipboard list import helper
+  const handleImportClipboard = async () => {
     try {
       const textFromClipboard = await navigator.clipboard.readText();
       if (!textFromClipboard.trim()) {
         alert(t.quoteManager.clipboardEmpty || 'Clipboard is empty');
         return;
       }
-      setExtractText(textFromClipboard);
-      setIsClipboardExtract(true);
-      await handleAiExtract(textFromClipboard);
+      setImportText(textFromClipboard);
+      parseLocalList(textFromClipboard);
     } catch (err) {
       console.error('Clipboard access denied or failed:', err);
       alert(t.quoteManager.clipboardDenied || 'Failed to read clipboard. Please make sure clipboard permissions are granted.');
-    } finally {
-      setIsClipboardExtract(false);
     }
   };
 
@@ -605,18 +632,34 @@ Requirements:
 
         {/* Tab Switcher */}
         <div className="border-b px-4 py-2 theme-modal-border-light">
-          <div className={`slider-switcher ${tab === 'ai' ? 'active-right' : ''}`}>
+          <div className={`slider-switcher-3 ${tab === 'import' ? 'active-middle' : tab === 'ai' ? 'active-right' : ''}`}>
             <div className="slider-indicator" />
             <button
               type="button"
-              onClick={() => setTab('manual')}
+              onClick={() => {
+                setTab('manual');
+                setSuggestions([]);
+              }}
               className={`slider-btn ${tab === 'manual' ? 'active' : ''}`}
             >
               {t.quoteManager.tabManual}
             </button>
             <button
               type="button"
-              onClick={() => setTab('ai')}
+              onClick={() => {
+                setTab('import');
+                setSuggestions([]);
+              }}
+              className={`slider-btn ${tab === 'import' ? 'active' : ''}`}
+            >
+              {t.quoteManager.tabImport}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setTab('ai');
+                setSuggestions([]);
+              }}
               className={`slider-btn ${tab === 'ai' ? 'active' : ''}`}
             >
               {t.quoteManager.tabAI}
@@ -626,7 +669,7 @@ Requirements:
 
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 theme-modal-scrollbar">
-          {tab === 'manual' ? (
+          {tab === 'manual' && (
             <>
               {/* Preset Decks / Curated Library */}
               <div className="mb-6 flex flex-col gap-2">
@@ -802,8 +845,57 @@ Requirements:
                 </button>
               </form>
             </>
-          ) : (
-            /* AI Assistant Tab */
+          )}
+
+          {/* Batch Import Tab */}
+          {tab === 'import' && (
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-[0.15em] theme-modal-text-section">
+                  {t.quoteManager.importLabel}
+                </span>
+                <textarea
+                  value={importText}
+                  onChange={(e) => setImportText(e.target.value)}
+                  placeholder={t.quoteManager.importPlaceholder}
+                  rows={6}
+                  className="w-full resize-none rounded-xl border px-3.5 py-2.5 text-sm shadow-inner outline-none transition placeholder:text-neutral-500 theme-modal-select"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => parseLocalList(importText)}
+                  disabled={!importText.trim()}
+                  className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl py-3 text-xs font-bold text-white shadow transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30 qm-accent-btn"
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                  </svg>
+                  {t.quoteManager.btnParseList}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleImportClipboard}
+                  className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl py-3 text-xs font-bold text-white shadow transition active:scale-[0.98] qm-accent-btn"
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                  {t.quoteManager.btnImportClipboard}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* AI Assistant Tab */}
+          {tab === 'ai' && (
             <div className="flex flex-col gap-4">
               {/* Missing API Key Warning */}
               {!OPENROUTER_API_KEY && (
@@ -982,178 +1074,155 @@ Requirements:
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleAiExtract()}
-                      disabled={extractLoading || !extractText.trim() || !OPENROUTER_API_KEY}
-                      className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl py-3 text-xs font-bold text-white shadow transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30 qm-accent-btn"
-                    >
-                      {extractLoading && !isClipboardExtract ? (
-                        <>
-                          <svg className="animate-spin h-3.5 w-3.5 text-white" viewBox="0 0 24 24" fill="none">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                          </svg>
-                          {t.quoteManager.btnExtractLoading}
-                        </>
-                      ) : (
-                        <>
-                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
-                          </svg>
-                          {t.quoteManager.btnExtract}
-                        </>
-                      )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleAiExtractClipboard}
-                      disabled={extractLoading || !OPENROUTER_API_KEY}
-                      className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl py-3 text-xs font-bold text-white shadow transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30 qm-accent-btn"
-                    >
-                      {extractLoading && isClipboardExtract ? (
-                        <>
-                          <svg className="animate-spin h-3.5 w-3.5 text-white" viewBox="0 0 24 24" fill="none">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                          </svg>
-                          {t.quoteManager.btnExtractClipboardLoading}
-                        </>
-                      ) : (
-                        <>
-                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                          </svg>
-                          {t.quoteManager.btnExtractClipboard}
-                        </>
-                      )}
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleAiExtract()}
+                    disabled={extractLoading || !extractText.trim() || !OPENROUTER_API_KEY}
+                    className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white shadow transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30 qm-accent-btn"
+                  >
+                    {extractLoading ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        {t.quoteManager.btnExtractLoading}
+                      </>
+                    ) : (
+                      <>
+                        <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                        </svg>
+                        {t.quoteManager.btnExtract}
+                      </>
+                    )}
+                  </button>
                 </div>
               )}
+            </div>
+          )}
 
-              {/* Suggestions results List */}
-              {suggestions.length > 0 && (
-                <div className="mt-4 flex flex-col gap-3 animate-fadeIn border-t pt-4 theme-modal-border-light">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.15em] theme-modal-text-section">
-                      {aiMode === 'generate' ? t.quoteManager.aiGeneratedTitle : t.quoteManager.aiExtractedTitle}
-                    </span>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={handleAddSelected}
-                        disabled={suggestions.every(s => s.added || !s.checked)}
-                        className="rounded-lg px-2.5 py-1 text-[11px] font-bold border transition-all duration-200 cursor-pointer disabled:opacity-30 disabled:scale-100 disabled:cursor-not-allowed"
-                        style={{
-                          color: 'var(--accent-color)',
-                          backgroundColor: 'rgba(var(--accent-color-rgb), 0.1)',
-                          borderColor: 'rgba(var(--accent-color-rgb), 0.2)'
-                        }}
-                      >
-                        {t.quoteManager.btnAddToDeck}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleAddAll}
-                        disabled={suggestions.every(s => s.added)}
-                        className="rounded-lg px-2.5 py-1 text-[11px] font-bold border transition-all duration-200 cursor-pointer theme-modal-reset-btn disabled:opacity-30 disabled:cursor-not-allowed"
-                      >
-                        {t.quoteManager.btnAddAllToDeck}
-                      </button>
+          {/* Suggestions results List */}
+          {suggestions.length > 0 && (
+            <div className="mt-4 flex flex-col gap-3 animate-fadeIn border-t pt-4 theme-modal-border-light">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold uppercase tracking-[0.15em] theme-modal-text-section">
+                  {tab === 'import'
+                    ? t.quoteManager.importTitle
+                    : aiMode === 'generate'
+                    ? t.quoteManager.aiGeneratedTitle
+                    : t.quoteManager.aiExtractedTitle}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleAddSelected}
+                    disabled={suggestions.every(s => s.added || !s.checked)}
+                    className="rounded-lg px-2.5 py-1 text-[11px] font-bold border transition-all duration-200 cursor-pointer disabled:opacity-30 disabled:scale-100 disabled:cursor-not-allowed"
+                    style={{
+                      color: 'var(--accent-color)',
+                      backgroundColor: 'rgba(var(--accent-color-rgb), 0.1)',
+                      borderColor: 'rgba(var(--accent-color-rgb), 0.2)'
+                    }}
+                  >
+                    {t.quoteManager.btnAddToDeck}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddAll}
+                    disabled={suggestions.every(s => s.added)}
+                    className="rounded-lg px-2.5 py-1 text-[11px] font-bold border transition-all duration-200 cursor-pointer theme-modal-reset-btn disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    {t.quoteManager.btnAddAllToDeck}
+                  </button>
+                </div>
+              </div>
+
+              <ul className="flex flex-col gap-3">
+                {suggestions.map((s, index) => (
+                  <li
+                    key={s.id}
+                    className={`group relative flex flex-col gap-2.5 rounded-2xl border p-4 shadow transition-all duration-300 quote-manager-card ${
+                      s.added
+                        ? 'opacity-40'
+                        : s.checked
+                        ? 'checked'
+                        : ''
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      {/* Checkbox */}
+                      <input
+                        type="checkbox"
+                        checked={s.checked}
+                        disabled={s.added}
+                        onChange={() => handleToggleChecked(index)}
+                        className="mt-1 h-4 w-4 cursor-pointer disabled:opacity-30 theme-modal-checkbox"
+                      />
+                      
+                      {/* Inline editable quote text */}
+                      <textarea
+                        value={s.text}
+                        disabled={s.added}
+                        onChange={(e) => handleUpdateSuggestion(index, { text: e.target.value })}
+                        rows={2}
+                        className="flex-1 resize-none bg-transparent text-sm font-medium leading-relaxed outline-none border border-transparent rounded p-1.5 disabled:bg-transparent qm-inline-edit"
+                      />
                     </div>
-                  </div>
 
-                  <ul className="flex flex-col gap-3">
-                    {suggestions.map((s, index) => (
-                      <li
-                        key={s.id}
-                        className={`group relative flex flex-col gap-2.5 rounded-2xl border p-4 shadow transition-all duration-300 quote-manager-card ${
-                          s.added
-                            ? 'opacity-40'
-                            : s.checked
-                            ? 'checked'
-                            : ''
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          {/* Checkbox */}
-                          <input
-                            type="checkbox"
-                            checked={s.checked}
-                            disabled={s.added}
-                            onChange={() => handleToggleChecked(index)}
-                            className="mt-1 h-4 w-4 cursor-pointer disabled:opacity-30 theme-modal-checkbox"
-                          />
-                          
-                          {/* Inline editable quote text */}
-                          <textarea
-                            value={s.text}
-                            disabled={s.added}
-                            onChange={(e) => handleUpdateSuggestion(index, { text: e.target.value })}
-                            rows={2}
-                            className="flex-1 resize-none bg-transparent text-sm font-medium leading-relaxed outline-none border border-transparent rounded p-1.5 disabled:bg-transparent qm-inline-edit"
-                          />
-                        </div>
+                    {/* Metadata row */}
+                    <div className="flex items-center justify-between pl-7 mt-0.5">
+                      {/* Inline editable author */}
+                      <input
+                        type="text"
+                        value={s.author}
+                        disabled={s.added}
+                        onChange={(e) => handleUpdateSuggestion(index, { author: e.target.value })}
+                        className="w-1/3 bg-transparent text-xs font-bold outline-none border border-transparent rounded px-1.5 py-0.5 disabled:bg-transparent qm-inline-edit theme-modal-text-muted"
+                      />
 
-                        {/* Metadata row */}
-                        <div className="flex items-center justify-between pl-7 mt-0.5">
-                          {/* Inline editable author */}
-                          <input
-                            type="text"
-                            value={s.author}
-                            disabled={s.added}
-                            onChange={(e) => handleUpdateSuggestion(index, { author: e.target.value })}
-                            className="w-1/3 bg-transparent text-xs font-bold outline-none border border-transparent rounded px-1.5 py-0.5 disabled:bg-transparent qm-inline-edit theme-modal-text-muted"
-                          />
+                      {/* Controls: Weight choices & Add */}
+                      <div className="flex items-center gap-2">
+                        <CustomSelect
+                          options={weightOptions}
+                          value={s.weight}
+                          disabled={s.added}
+                          onChange={(val) => handleUpdateSuggestion(index, { weight: val as WeightChoice })}
+                          triggerClassName="py-1 px-2 text-[10px] rounded-lg border-white/10"
+                          align="right"
+                          className="w-32"
+                        />
 
-                          {/* Controls: Weight choices & Add */}
-                          <div className="flex items-center gap-2">
-                            <CustomSelect
-                              options={weightOptions}
-                              value={s.weight}
-                              disabled={s.added}
-                              onChange={(val) => handleUpdateSuggestion(index, { weight: val as WeightChoice })}
-                              triggerClassName="py-1 px-2 text-[10px] rounded-lg border-white/10"
-                              align="right"
-                              className="w-32"
-                            />
-
-                            <button
-                              type="button"
-                              disabled={s.added}
-                              onClick={() => handleAddSuggestion(index)}
-                              style={s.added ? {
-                                backgroundColor: 'rgba(var(--accent-color-rgb), 0.1)',
-                                borderColor: 'rgba(var(--accent-color-rgb), 0.15)',
-                                color: 'var(--accent-color)'
-                              } : {
-                                backgroundColor: 'var(--accent-color)',
-                                color: 'var(--theme-paper-bg)',
-                                borderColor: 'var(--accent-color)'
-                              }}
-                              className={`flex h-7 w-7 items-center justify-center rounded-lg shadow-sm border transition-all duration-200 cursor-pointer active:scale-90 hover:brightness-110`}
-                            >
-                              {s.added ? (
-                                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
-                                  <path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                              ) : (
-                                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
-                                  <path d="M12 5v14M5 12h14" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                        <button
+                          type="button"
+                          disabled={s.added}
+                          onClick={() => handleAddSuggestion(index)}
+                          style={s.added ? {
+                            backgroundColor: 'rgba(var(--accent-color-rgb), 0.1)',
+                            borderColor: 'rgba(var(--accent-color-rgb), 0.15)',
+                            color: 'var(--accent-color)'
+                          } : {
+                            backgroundColor: 'var(--accent-color)',
+                            color: 'var(--theme-paper-bg)',
+                            borderColor: 'var(--accent-color)'
+                          }}
+                          className={`flex h-7 w-7 items-center justify-center rounded-lg shadow-sm border transition-all duration-200 cursor-pointer active:scale-90 hover:brightness-110`}
+                        >
+                          {s.added ? (
+                            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
+                              <path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          ) : (
+                            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
+                              <path d="M12 5v14M5 12h14" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 

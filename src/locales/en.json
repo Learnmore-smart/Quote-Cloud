@@ -76,7 +76,13 @@
       "light": "Light"
     },
     "tabManual": "Manual Add",
+    "tabImport": "Batch Import",
     "tabAI": "AI Generator",
+    "importLabel": "Paste Quote List (One per line)",
+    "importPlaceholder": "Paste a list of quotes here, e.g.:\nQuote content — Author\nAnother quote — Author",
+    "btnParseList": "Parse & Preview",
+    "btnImportClipboard": "Import Clipboard",
+    "importTitle": "Quotes to Import",
     "aiModeGenerate": "AI Generation",
     "aiModeExtract": "AI Extraction",
     "aiPromptPlaceholder": "E.g., inspiring insight on minimalism, or custom topic...",

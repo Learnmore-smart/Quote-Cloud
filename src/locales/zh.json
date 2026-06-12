@@ -76,7 +76,13 @@
       "light": "细体"
     },
     "tabManual": "手动添加",
+    "tabImport": "批量导入",
     "tabAI": "AI 灵感库",
+    "importLabel": "批量导入语录列表 (每行一条)",
+    "importPlaceholder": "请在这里粘贴语录列表，格式如：\n17岁能做到这些，不管结果如何... — 立正课代表\n很多产品死掉，不是因为技术没做出来... — 立正课代表",
+    "btnParseList": "解析并预览",
+    "btnImportClipboard": "剪贴板一键导入",
+    "importTitle": "待导入候选",
     "aiModeGenerate": "AI 智能生成",
     "aiModeExtract": "AI 智能提取",
     "aiPromptPlaceholder": "例如：关于极简主义的深刻见解，或输入特定主题...",
