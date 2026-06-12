@@ -79,7 +79,7 @@
     "tabImport": "批量导入",
     "tabAI": "AI 灵感库",
     "importLabel": "批量导入语录列表 (每行一条)",
-    "importPlaceholder": "请在这里粘贴语录列表，格式如：\n17岁能做到这些，不管结果如何... — 立正课代表\n很多产品死掉，不是因为技术没做出来... — 立正课代表",
+    "importPlaceholder": "请在这里粘贴语录列表，格式如：\n求知若饥，虚心若愚 — 史蒂夫·乔布斯\n我思故我在 — 勒内·笛卡尔",
     "btnParseList": "解析并预览",
     "btnImportClipboard": "剪贴板一键导入",
     "importTitle": "待导入候选",

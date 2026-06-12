@@ -79,7 +79,7 @@
     "tabImport": "Batch Import",
     "tabAI": "AI Generator",
     "importLabel": "Paste Quote List (One per line)",
-    "importPlaceholder": "Paste a list of quotes here, e.g.:\nQuote content — Author\nAnother quote — Author",
+    "importPlaceholder": "Paste a list of quotes here, e.g.:\nStay hungry, stay foolish — Steve Jobs\nI think, therefore I am — René Descartes",
     "btnParseList": "Parse & Preview",
     "btnImportClipboard": "Import Clipboard",
     "importTitle": "Quotes to Import",
