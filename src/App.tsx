@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ControlPanel } from './components/ControlPanel';
 import { PaperCanvas } from './components/PaperCanvas';
 import { QuoteManager } from './components/QuoteManager';
@@ -9,6 +9,7 @@ import { injectPrintRule } from './print';
 import { SEED_QUOTES, FAMOUS_QUOTES, SEED_QUOTES_ZH, FAMOUS_QUOTES_ZH } from './seed';
 import { getPaperCanvasSize } from './config';
 import type { PaperKey, Orientation, Quote, PosterTheme } from './types';
+import { Eye, Sliders, Download } from 'lucide-react';
 import {
   ThemeColors,
   THEME_CONFIGS,
@@ -257,9 +258,12 @@ function computePreviewScale(
   canvasH: number,
   viewportW: number,
   viewportH: number,
+  isMobile: boolean,
 ): number {
-  const availW = Math.max(240, viewportW - 64);
-  const availH = Math.max(240, viewportH - 144);
+  const horizontalPadding = isMobile ? 32 : 64;
+  const verticalPadding = isMobile ? 120 : 144;
+  const availW = Math.max(200, viewportW - horizontalPadding);
+  const availH = Math.max(200, viewportH - verticalPadding);
   return Math.min(1, availW / canvasW, availH / canvasH);
 }
 
@@ -310,6 +314,113 @@ export default function App() {
     h: typeof window !== 'undefined' ? window.innerHeight : 800,
   });
 
+  const isMobile = useMemo(() => viewportSize.w <= 768, [viewportSize.w]);
+
+  // Mobile pager state
+  const [activeTab, setActiveTab] = useState(0);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Touch gesture tracking refs
+  const touchStartRef = useRef({ x: 0, y: 0 });
+  const swipeDirectionRef = useRef<'horizontal' | 'vertical' | null>(null);
+  const latestStateRef = useRef({ activeTab, isDragging, dragOffset });
+
+  useEffect(() => {
+    latestStateRef.current = { activeTab, isDragging, dragOffset };
+  }, [activeTab, isDragging, dragOffset]);
+
+  const pagerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const element = pagerRef.current;
+    if (!element) return;
+
+    const handleStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      touchStartRef.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+      };
+      setIsDragging(true);
+      setDragOffset(0);
+      swipeDirectionRef.current = null;
+    };
+
+    const handleMove = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      const currentX = e.touches[0].clientX;
+      const currentY = e.touches[0].clientY;
+      const diffX = currentX - touchStartRef.current.x;
+      const diffY = currentY - touchStartRef.current.y;
+
+      const absX = Math.abs(diffX);
+      const absY = Math.abs(diffY);
+
+      if (swipeDirectionRef.current === null) {
+        if (absX > 8 || absY > 8) {
+          if (absX > absY) {
+            swipeDirectionRef.current = 'horizontal';
+          } else {
+            swipeDirectionRef.current = 'vertical';
+          }
+        }
+      }
+
+      if (swipeDirectionRef.current === 'horizontal') {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+        const currentActiveTab = latestStateRef.current.activeTab;
+        let offset = diffX;
+        if (currentActiveTab === 0 && diffX > 0) {
+          offset = diffX * 0.25;
+        } else if (currentActiveTab === 1 && diffX < 0) {
+          offset = diffX * 0.25;
+        }
+        setDragOffset(offset);
+      }
+    };
+
+    const handleEnd = () => {
+      const currentActiveTab = latestStateRef.current.activeTab;
+      const currentDragOffset = latestStateRef.current.dragOffset;
+
+      setIsDragging(false);
+
+      if (swipeDirectionRef.current === 'horizontal') {
+        const threshold = window.innerWidth * 0.35;
+        if (currentDragOffset < -threshold && currentActiveTab === 0) {
+          setActiveTab(1);
+        } else if (currentDragOffset > threshold && currentActiveTab === 1) {
+          setActiveTab(0);
+        }
+      }
+      setDragOffset(0);
+      swipeDirectionRef.current = null;
+    };
+
+    element.addEventListener('touchstart', handleStart, { passive: true });
+    element.addEventListener('touchmove', handleMove, { passive: false });
+    element.addEventListener('touchend', handleEnd, { passive: true });
+
+    return () => {
+      element.removeEventListener('touchstart', handleStart);
+      element.removeEventListener('touchmove', handleMove);
+      element.removeEventListener('touchend', handleEnd);
+    };
+  }, [isMobile]);
+
+  const pagerTrackStyle = useMemo(() => {
+    return {
+      transform: `translate3d(calc(-${activeTab * 50}% + ${dragOffset}px), 0, 0)`,
+      transition: isDragging ? 'none' : 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+      display: 'flex',
+      width: '200%',
+      height: '100%',
+    } as React.CSSProperties;
+  }, [activeTab, dragOffset, isDragging]);
+
   // Track viewport size
   useEffect(() => {
     const handleResize = () => {
@@ -330,8 +441,9 @@ export default function App() {
       canvasSize.h,
       viewportSize.w,
       viewportSize.h,
+      isMobile,
     ),
-    [canvasSize.h, canvasSize.w, viewportSize.h, viewportSize.w],
+    [canvasSize.h, canvasSize.w, viewportSize.h, viewportSize.w, isMobile],
   );
 
   // Wait for fonts before the first auto-fit pass so the binary search measures
@@ -658,63 +770,167 @@ export default function App() {
           </div>
           <div className="logo">
             {lang === 'zh' ? '语录云图' : 'QUOTE CLOUD'}
-            <span className="logo-sub">v2.2</span>
+            <span className="logo-sub">v3.0</span>
           </div>
         </div>
       </header>
       
-      <main className={`app-main orientation-${orientation}`}>
-        <PaperCanvas
-          canvasSize={canvasSize}
-          previewScale={previewScale}
-          items={items}
-          showAuthor={showAuthor}
-          loading={loading}
-          theme={theme}
-          themeMode={themeMode}
-          customColors={themeMode === 'dark' ? customColorsDark : customColorsLight}
-          customFont={customFont}
-          composingText={t.loader.composing}
-          signatureText={t.loader.signature}
-          maskType={maskType}
-          maskOpacity={maskOpacity}
-          showPreviewOverlay={showPreviewOverlay}
-          orientation={orientation}
-          currentLang={lang}
-          showGrid={showGrid}
-          userThemes={userThemes}
-          fontOverride={fontOverride}
-          colorContrast={colorContrast}
-          italicAuthor={italicAuthor}
-        />
-      </main>
+      {isMobile ? (
+        <>
+          <main className={`app-main orientation-${orientation}`}>
+            <div
+              ref={pagerRef}
+              className="mobile-pager"
+            >
+              <div className="mobile-pager-track" style={pagerTrackStyle}>
+                {/* Page 1: Poster Canvas */}
+                <div className="mobile-page-slide">
+                  <div className="mobile-canvas-container">
+                    <PaperCanvas
+                      canvasSize={canvasSize}
+                      previewScale={previewScale}
+                      items={items}
+                      showAuthor={showAuthor}
+                      loading={loading}
+                      theme={theme}
+                      themeMode={themeMode}
+                      customColors={themeMode === 'dark' ? customColorsDark : customColorsLight}
+                      customFont={customFont}
+                      composingText={t.loader.composing}
+                      signatureText={t.loader.signature}
+                      maskType={maskType}
+                      maskOpacity={maskOpacity}
+                      showPreviewOverlay={showPreviewOverlay}
+                      orientation={orientation}
+                      currentLang={lang}
+                      showGrid={showGrid}
+                      userThemes={userThemes}
+                      fontOverride={fontOverride}
+                      colorContrast={colorContrast}
+                      italicAuthor={italicAuthor}
+                    />
+                  </div>
+                </div>
 
-      <ControlPanel
-        paper={paper}
-        orientation={orientation}
-        showAuthor={showAuthor}
-        colorContrast={colorContrast}
-        italicAuthor={italicAuthor}
-        theme={theme}
-        onPaperChange={setPaper}
-        onOrientationChange={setOrientation}
-        onShowAuthorChange={setShowAuthor}
-        onColorContrastChange={setColorContrast}
-        onItalicAuthorChange={setItalicAuthor}
-        onManageQuotes={() => setManageOpen(true)}
-        onOpenThemeModal={() => setThemeModalOpen(true)}
-        onOpenExportModal={() => setExportModalOpen(true)}
-        t={t}
-        currentLang={lang}
-        maskType={maskType}
-        maskOpacity={maskOpacity}
-        showPreviewOverlay={showPreviewOverlay}
-        onMaskTypeChange={setMaskType}
-        onMaskOpacityChange={setMaskOpacity}
-        onShowPreviewOverlayChange={setShowPreviewOverlay}
-        customThemeName={customThemeName}
-        onShuffle={() => setShuffleSeed(randomSeed())}
-      />
+                {/* Page 2: Control Panel */}
+                <div className="mobile-page-slide mobile-controls-slide">
+                  <ControlPanel
+                    paper={paper}
+                    orientation={orientation}
+                    showAuthor={showAuthor}
+                    colorContrast={colorContrast}
+                    italicAuthor={italicAuthor}
+                    theme={theme}
+                    onPaperChange={setPaper}
+                    onOrientationChange={setOrientation}
+                    onShowAuthorChange={setShowAuthor}
+                    onColorContrastChange={setColorContrast}
+                    onItalicAuthorChange={setItalicAuthor}
+                    onManageQuotes={() => setManageOpen(true)}
+                    onOpenThemeModal={() => setThemeModalOpen(true)}
+                    onOpenExportModal={() => setExportModalOpen(true)}
+                    t={t}
+                    currentLang={lang}
+                    maskType={maskType}
+                    maskOpacity={maskOpacity}
+                    showPreviewOverlay={showPreviewOverlay}
+                    onMaskTypeChange={setMaskType}
+                    onMaskOpacityChange={setMaskOpacity}
+                    onShowPreviewOverlayChange={setShowPreviewOverlay}
+                    customThemeName={customThemeName}
+                    onShuffle={() => setShuffleSeed(randomSeed())}
+                    isMobile={isMobile}
+                  />
+                </div>
+              </div>
+            </div>
+          </main>
+
+          {/* Bottom mobile navbar */}
+          <div className="mobile-navbar">
+            <button
+              type="button"
+              className={`nav-item ${activeTab === 0 ? 'active' : ''}`}
+              onClick={() => setActiveTab(0)}
+            >
+              <Eye />
+              <span>{lang === 'zh' ? '海报预览' : 'Preview'}</span>
+            </button>
+            <button
+              type="button"
+              className={`nav-item ${activeTab === 1 ? 'active' : ''}`}
+              onClick={() => setActiveTab(1)}
+            >
+              <Sliders />
+              <span>{lang === 'zh' ? '个性排版' : 'Design'}</span>
+            </button>
+            <button
+              type="button"
+              className="nav-item export-btn"
+              onClick={() => setExportModalOpen(true)}
+            >
+              <Download />
+              <span>{lang === 'zh' ? '导出海报' : 'Export'}</span>
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <main className={`app-main orientation-${orientation}`}>
+            <PaperCanvas
+              canvasSize={canvasSize}
+              previewScale={previewScale}
+              items={items}
+              showAuthor={showAuthor}
+              loading={loading}
+              theme={theme}
+              themeMode={themeMode}
+              customColors={themeMode === 'dark' ? customColorsDark : customColorsLight}
+              customFont={customFont}
+              composingText={t.loader.composing}
+              signatureText={t.loader.signature}
+              maskType={maskType}
+              maskOpacity={maskOpacity}
+              showPreviewOverlay={showPreviewOverlay}
+              orientation={orientation}
+              currentLang={lang}
+              showGrid={showGrid}
+              userThemes={userThemes}
+              fontOverride={fontOverride}
+              colorContrast={colorContrast}
+              italicAuthor={italicAuthor}
+            />
+          </main>
+
+          <ControlPanel
+            paper={paper}
+            orientation={orientation}
+            showAuthor={showAuthor}
+            colorContrast={colorContrast}
+            italicAuthor={italicAuthor}
+            theme={theme}
+            onPaperChange={setPaper}
+            onOrientationChange={setOrientation}
+            onShowAuthorChange={setShowAuthor}
+            onColorContrastChange={setColorContrast}
+            onItalicAuthorChange={setItalicAuthor}
+            onManageQuotes={() => setManageOpen(true)}
+            onOpenThemeModal={() => setThemeModalOpen(true)}
+            onOpenExportModal={() => setExportModalOpen(true)}
+            t={t}
+            currentLang={lang}
+            maskType={maskType}
+            maskOpacity={maskOpacity}
+            showPreviewOverlay={showPreviewOverlay}
+            onMaskTypeChange={setMaskType}
+            onMaskOpacityChange={setMaskOpacity}
+            onShowPreviewOverlayChange={setShowPreviewOverlay}
+            customThemeName={customThemeName}
+            onShuffle={() => setShuffleSeed(randomSeed())}
+            isMobile={isMobile}
+          />
+        </>
+      )}
 
       <QuoteManager
         open={manageOpen}

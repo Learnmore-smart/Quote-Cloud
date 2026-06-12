@@ -28,6 +28,7 @@ interface ControlPanelProps {
   onShowPreviewOverlayChange: (show: boolean) => void;
   customThemeName?: string;
   onShuffle: () => void;
+  isMobile?: boolean;
 }
 
 const PAPER_OPTIONS: Array<{ value: PaperKey; label: string; dims: string }> = [
@@ -71,11 +72,16 @@ export function ControlPanel({
   onShowPreviewOverlayChange,
   customThemeName,
   onShuffle,
+  isMobile = false,
 }: ControlPanelProps) {
   return (
     <aside
       id="controls"
-      className="controls fixed right-6 top-6 z-50 w-80 max-h-[calc(100vh-48px)] overflow-y-auto custom-scrollbar select-none rounded-3xl border p-6 transition-all duration-300 [font-family:Inter,ui-sans-serif,system-ui,sans-serif]"
+      className={`controls select-none custom-scrollbar [font-family:Inter,ui-sans-serif,system-ui,sans-serif] ${
+        isMobile
+          ? 'relative w-full h-full max-h-none overflow-y-auto p-6 pb-28 border-none bg-transparent shadow-none'
+          : 'fixed right-6 top-6 z-50 w-80 max-h-[calc(100vh-48px)] overflow-y-auto rounded-3xl border p-6 transition-all duration-300'
+      }`}
     >
       {/* Portfolio Links */}
       <div className="mb-5 flex items-center justify-between border-b border-white/5 pb-4">
