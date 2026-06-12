@@ -10,6 +10,7 @@ interface QuoteManagerProps {
   onAdd: (quote: Quote) => void;
   onDelete: (index: number) => void;
   onUpdate: (index: number, quote: Quote) => void;
+  onClearAll: () => void;
   onFeelLucky: () => void;
   onLoadPreset: (quotes: Quote[]) => void;
   t: any;
@@ -141,7 +142,7 @@ const PRESET_DECKS = {
 };
 
 /* =============================================================================
- * Helper: call OpenRouter Chat Completion API (using Gemma-4-31B-it:free)
+ * Helper: call OpenRouter Chat Completion API (using Gemma-4-31B-it:free and fallbacks)
  * ============================================================================= */
 async function fetchFromOpenRouter(messages: { role: string; content: string }[]) {
   const apiKey = OPENROUTER_API_KEY;
@@ -149,29 +150,48 @@ async function fetchFromOpenRouter(messages: { role: string; content: string }[]
     throw new Error('API Key is missing. Please set VITE_OPENROUTER_API_KEY in your .env file.');
   }
 
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-      'HTTP-Referer': typeof window !== 'undefined' ? window.location.origin : 'https://github.com',
-      'X-Title': 'Quote Cloud Layout Studio',
-    },
-    body: JSON.stringify({
-      model: 'google/gemma-4-31b-it:free',
-      messages,
-      temperature: 0.7,
-    }),
-  });
+  const models = [
+    'google/gemma-4-31b-it:free',
+    'google/gemma-4-26b-a4b-it:free',
+    'nvidia/nemotron-3-ultra-550b-a55b:free',
+    'openrouter/free'
+  ];
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenRouter Error (${response.status}): ${errorText}`);
+  let lastError: Error | null = null;
+
+  for (const model of models) {
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'HTTP-Referer': typeof window !== 'undefined' ? window.location.origin : 'https://github.com',
+          'X-Title': 'Quote Cloud Layout Studio',
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          temperature: 0.7,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`OpenRouter Error (${response.status}) [Model: ${model}]: ${errorText}`);
+      }
+
+      const result = await response.json();
+      return result.choices?.[0]?.message?.content || '';
+    } catch (err: any) {
+      console.warn(`Model ${model} failed, trying next fallback... Error:`, err);
+      lastError = err instanceof Error ? err : new Error(String(err));
+    }
   }
 
-  const result = await response.json();
-  return result.choices?.[0]?.message?.content || '';
+  throw lastError || new Error('All models failed to respond.');
 }
+
 
 /* =============================================================================
  * Helper: parse JSON array from AI output with fallbacks
@@ -238,6 +258,7 @@ export function QuoteManager({
   onAdd,
   onDelete,
   onUpdate,
+  onClearAll,
   onFeelLucky,
   onLoadPreset,
   t,
@@ -246,6 +267,7 @@ export function QuoteManager({
   // Tabs & Modes
   const [tab, setTab] = useState<'manual' | 'ai'>('manual');
   const [aiMode, setAiMode] = useState<'generate' | 'extract'>('generate');
+  const [showConfirmClear, setShowConfirmClear] = useState(false);
 
   // Manual form state
   const [text, setText] = useState('');
@@ -323,7 +345,7 @@ Requirements:
 1. Output MUST be a valid JSON array of objects. No markdown wrapper (like \`\`\`json), no trailing text, just raw JSON.
 2. Structure: [{"text": "Quote here", "author": "Author name"}]
 3. Make quotes concise (under 80 characters), impactful, and layout-friendly.
-4. If the author is unknown, use "Anonymous".
+4. DO NOT attribute quotes to "Anonymous", "Unknown", or "无名氏". Try to attribute each quote to a famous historical or contemporary figure (thinker, philosopher, scientist, writer, technologist, artist, etc.) whose ideas or styles align with the quote. If it is a traditional proverb or cultural saying, attribute it to its specific origin (e.g., "African Proverb", "Zen Saying", "Chinese Proverb", "Greek Proverb").
 5. The language MUST be ${activeLang}.
 6. Vibe/style: ${aiStyle}.`;
 
@@ -361,7 +383,7 @@ Requirements:
 Requirements:
 1. Output MUST be a valid JSON array of objects. No markdown wrapper, no trailing text, just raw JSON.
 2. Structure: [{"text": "Quote here", "author": "Author name"}]
-3. Infer the author from the context. If unknown or not mentioned, write "Anonymous" or the name of the speaker.
+3. Infer the author from the context. If the author is unknown or not mentioned, try to specify a descriptive origin or source (e.g., "Internet Saying", "Traditional Proverb", "Book Excerpt") rather than defaulting to generic "Anonymous" or "Unknown".
 4. Keep the quotes concise and powerful.
 5. The extracted quotes should be in their original language.`;
 
@@ -972,12 +994,17 @@ Requirements:
                     <span className="text-[10px] font-bold uppercase tracking-[0.15em] theme-modal-text-section">
                       {aiMode === 'generate' ? t.quoteManager.aiGeneratedTitle : t.quoteManager.aiExtractedTitle}
                     </span>
-                    <div className="flex gap-3">
+                    <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={handleAddSelected}
                         disabled={suggestions.every(s => s.added || !s.checked)}
-                        className="text-xs font-bold disabled:opacity-30 transition cursor-pointer qm-accent-text"
+                        className="rounded-lg px-2.5 py-1 text-[11px] font-bold border transition-all duration-200 cursor-pointer disabled:opacity-30 disabled:scale-100 disabled:cursor-not-allowed"
+                        style={{
+                          color: 'var(--accent-color)',
+                          backgroundColor: 'rgba(var(--accent-color-rgb), 0.1)',
+                          borderColor: 'rgba(var(--accent-color-rgb), 0.2)'
+                        }}
                       >
                         {t.quoteManager.btnAddToDeck}
                       </button>
@@ -985,7 +1012,7 @@ Requirements:
                         type="button"
                         onClick={handleAddAll}
                         disabled={suggestions.every(s => s.added)}
-                        className="text-xs font-bold disabled:opacity-30 transition cursor-pointer theme-modal-text-muted"
+                        className="rounded-lg px-2.5 py-1 text-[11px] font-bold border transition-all duration-200 cursor-pointer theme-modal-reset-btn disabled:opacity-30 disabled:cursor-not-allowed"
                       >
                         {t.quoteManager.btnAddAllToDeck}
                       </button>
@@ -1086,9 +1113,20 @@ Requirements:
           <hr className="my-6 theme-modal-border-light" />
 
           {/* Quote list */}
-          <span className="text-[10px] font-bold uppercase tracking-[0.15em] theme-modal-text-section">
-            {t.quoteManager.currentDeckLabel}
-          </span>
+          <div className="flex justify-between items-center mt-1">
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em] theme-modal-text-section">
+              {t.quoteManager.currentDeckLabel}
+            </span>
+            {quotes.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowConfirmClear(true)}
+                className="rounded-lg px-2.5 py-1 text-[11px] font-bold border transition duration-200 cursor-pointer text-red-500 border-red-500/20 bg-red-500/5 hover:bg-red-500/15 hover:border-red-500/30 active:scale-95 disabled:opacity-30"
+              >
+                {t.quoteManager.btnClearAll}
+              </button>
+            )}
+          </div>
           <ul className="mt-3 flex flex-col gap-2">
             {quotes.length === 0 && (
               <li className="rounded-2xl border border-dashed px-3.5 py-8 text-center text-sm theme-modal-border-light theme-modal-text-muted">
@@ -1203,6 +1241,39 @@ Requirements:
           </ul>
         </div>
       </aside>
+
+      {/* Clear All Confirmation Modal */}
+      {showConfirmClear && (
+        <div className="absolute inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 select-none animate-fadeIn">
+          <div className="flex w-full max-w-[340px] flex-col overflow-hidden rounded-2xl border p-5 shadow-2xl backdrop-blur-2xl theme-modal-window">
+            <h3 className="text-sm font-bold theme-modal-text-title">
+              {t.quoteManager.clearAllConfirmTitle}
+            </h3>
+            <p className="text-[11px] mt-1.5 leading-relaxed theme-modal-text-muted">
+              {t.quoteManager.clearAllConfirmDesc}
+            </p>
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                type="button"
+                onClick={() => setShowConfirmClear(false)}
+                className="rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer qm-secondary-btn"
+              >
+                {t.quoteManager.clearAllCancelBtn}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onClearAll();
+                  setShowConfirmClear(false);
+                }}
+                className="rounded-lg px-3 py-1.5 text-xs font-bold text-white shadow transition cursor-pointer bg-red-500 hover:bg-red-600 hover:scale-[1.01] active:scale-[0.98]"
+              >
+                {t.quoteManager.clearAllConfirmBtn}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

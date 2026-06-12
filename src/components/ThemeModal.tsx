@@ -28,6 +28,8 @@ interface ThemeModalProps {
   onAddUserTheme: () => void;
   onDeleteUserTheme: (themeId: string) => void;
   previewItems: ScatterItem[];
+  colorContrast: boolean;
+  italicAuthor: boolean;
 }
 
 export function ThemeModal({
@@ -52,6 +54,8 @@ export function ThemeModal({
   onAddUserTheme,
   onDeleteUserTheme,
   previewItems,
+  colorContrast,
+  italicAuthor,
 }: ThemeModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
@@ -395,6 +399,8 @@ export function ThemeModal({
                   showGrid={showGrid}
                   userThemes={userThemes}
                   fontOverride={fontOverride}
+                  colorContrast={colorContrast}
+                  italicAuthor={italicAuthor}
                 />
               )}
             </div>

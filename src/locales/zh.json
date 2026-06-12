@@ -8,8 +8,12 @@
     "orientation": "排版方向",
     "showAuthor": "显示作者",
     "showAuthorDesc": "在每条语录下方显示出处",
+    "italicAuthor": "斜体署名",
+    "italicAuthorDesc": "作者署名使用斜体样式渲染",
     "showGrid": "显示网格",
     "showGridDesc": "在卡片之间显示分割边框",
+    "colorContrast": "色彩对比",
+    "colorContrastDesc": "根据语录字重自动匹配主次色彩",
     "manageQuotes": "管理语录",
     "printPoster": "打印海报",
     "exportPoster": "导出与打印",
@@ -43,7 +47,8 @@
       "light": "亮色蒙版",
       "gradient-dark": "上下暗色渐变",
       "gradient-light": "上下亮色渐变",
-      "vignette": "四周暗角"
+      "vignette": "四周暗角",
+      "vignette-light": "四周亮角"
     }
   },
   "quoteManager": {
@@ -114,8 +119,13 @@
     "btnEdit": "编辑",
     "aiGeneratedTitle": "AI 灵感候选",
     "aiExtractedTitle": "AI 提取候选",
-    "btnAddToDeck": "添加",
+    "btnAddToDeck": "添加已选",
     "btnAddAllToDeck": "一键添加全部",
+    "btnClearAll": "一键清空",
+    "clearAllConfirmTitle": "确认清空所有语录？",
+    "clearAllConfirmDesc": "此操作将从当前画布中删除所有语录，且无法撤销。",
+    "clearAllConfirmBtn": "确认清空",
+    "clearAllCancelBtn": "取消",
     "aiPolishTooltip": "AI 智能润色",
     "aiPolishTitle": "AI 润色助手",
     "aiPolishOriginal": "原文",

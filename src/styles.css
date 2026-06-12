@@ -710,6 +710,14 @@ body {
   text-align-last: justify;
 }
 
+.quote.quote-bold {
+  color: var(--w2-color);
+}
+
+.quote.quote-light {
+  color: var(--w1-color);
+}
+
 .quote-cell-hero {
   align-items: center;
 }
@@ -1473,6 +1481,10 @@ button:active {
 
 .wallpaper-mask.mask-vignette {
   background: radial-gradient(circle, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.75) 100%);
+}
+
+.wallpaper-mask.mask-vignette-light {
+  background: radial-gradient(circle, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, 0.75) 100%);
 }
 
 /* Wallpaper Preview Overlay */

@@ -8,8 +8,12 @@
     "orientation": "Orientation",
     "showAuthor": "Show Author",
     "showAuthorDesc": "Attribution under each quote",
+    "italicAuthor": "Italic Attribution",
+    "italicAuthorDesc": "Render author attribution in italic style",
     "showGrid": "Show Grid",
     "showGridDesc": "Show split borders between cells",
+    "colorContrast": "Color Contrast",
+    "colorContrastDesc": "Distinguish weights using colors",
     "manageQuotes": "Manage Quotes",
     "printPoster": "Print Poster",
     "exportPoster": "Export / Print",
@@ -43,7 +47,8 @@
       "light": "Light Overlay",
       "gradient-dark": "Dark Gradient",
       "gradient-light": "Light Gradient",
-      "vignette": "Vignette"
+      "vignette": "Vignette",
+      "vignette-light": "Light Vignette"
     }
   },
   "quoteManager": {
@@ -114,8 +119,13 @@
     "btnEdit": "Edit",
     "aiGeneratedTitle": "AI Generated Suggestions",
     "aiExtractedTitle": "AI Extracted Quotes",
-    "btnAddToDeck": "Add",
+    "btnAddToDeck": "Add Selected",
     "btnAddAllToDeck": "Add All",
+    "btnClearAll": "Clear All",
+    "clearAllConfirmTitle": "Clear All Quotes?",
+    "clearAllConfirmDesc": "This action will remove all quotes from your current canvas and cannot be undone.",
+    "clearAllConfirmBtn": "Clear All",
+    "clearAllCancelBtn": "Cancel",
     "aiPolishTooltip": "AI Polish",
     "aiPolishTitle": "AI Polishing Assistant",
     "aiPolishOriginal": "Original",

@@ -10,6 +10,8 @@ interface AutoFitQuoteProps {
   loading: boolean;
   theme: string;
   fontFamily: string;
+  colorContrast?: boolean;
+  italicAuthor?: boolean;
 }
 
 /* =============================================================================
@@ -30,7 +32,7 @@ const MAX_FONT = 200;
 /** Stop the search once the window is tighter than this (px). */
 const PRECISION = 0.4;
 
-export function AutoFitQuote({ item, flex, showAuthor, loading, theme, fontFamily }: AutoFitQuoteProps) {
+export function AutoFitQuote({ item, flex, showAuthor, loading, theme, fontFamily, colorContrast = true, italicAuthor = true }: AutoFitQuoteProps) {
   const { quote, isHero, fontWeight, lineHeight, uppercase } = item;
 
   const cellRef = useRef<HTMLDivElement>(null);
@@ -130,12 +132,15 @@ export function AutoFitQuote({ item, flex, showAuthor, loading, theme, fontFamil
     >
       <p
         ref={textRef}
-        className={`quote${isHero ? ' quote-hero' : ''}`}
+        className={`quote${isHero ? ' quote-hero' : colorContrast ? (fontWeight === 900 ? ' quote-bold' : ' quote-light') : ''}`}
         style={textStyle}
       >
         {quote.text}
         {showAuthor && quote.author && (
-          <span className="opacity-80 whitespace-nowrap">
+          <span
+            className="author-name opacity-80 whitespace-nowrap"
+            style={{ fontStyle: italicAuthor ? 'italic' : 'normal' }}
+          >
             {' '}— {quote.author}
           </span>
         )}

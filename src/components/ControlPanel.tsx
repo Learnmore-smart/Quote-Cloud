@@ -7,19 +7,23 @@ interface ControlPanelProps {
   paper: PaperKey;
   orientation: Orientation;
   showAuthor: boolean;
+  colorContrast: boolean;
+  italicAuthor: boolean;
   theme: PosterTheme;
   onPaperChange: (paper: PaperKey) => void;
   onOrientationChange: (orient: Orientation) => void;
   onShowAuthorChange: (show: boolean) => void;
+  onColorContrastChange: (show: boolean) => void;
+  onItalicAuthorChange: (show: boolean) => void;
   onManageQuotes: () => void;
   onOpenThemeModal: () => void;
   onOpenExportModal: () => void;
   t: any;
   currentLang: 'en' | 'zh';
-  maskType: 'none' | 'dark' | 'light' | 'gradient-dark' | 'gradient-light' | 'vignette';
+  maskType: 'none' | 'dark' | 'light' | 'gradient-dark' | 'gradient-light' | 'vignette' | 'vignette-light';
   maskOpacity: number;
   showPreviewOverlay: boolean;
-  onMaskTypeChange: (type: 'none' | 'dark' | 'light' | 'gradient-dark' | 'gradient-light' | 'vignette') => void;
+  onMaskTypeChange: (type: 'none' | 'dark' | 'light' | 'gradient-dark' | 'gradient-light' | 'vignette' | 'vignette-light') => void;
   onMaskOpacityChange: (opacity: number) => void;
   onShowPreviewOverlayChange: (show: boolean) => void;
   customThemeName?: string;
@@ -46,10 +50,14 @@ export function ControlPanel({
   paper,
   orientation,
   showAuthor,
+  colorContrast,
+  italicAuthor,
   theme,
   onPaperChange,
   onOrientationChange,
   onShowAuthorChange,
+  onColorContrastChange,
+  onItalicAuthorChange,
   onManageQuotes,
   onOpenThemeModal,
   onOpenExportModal,
@@ -302,6 +310,68 @@ export function ControlPanel({
             className={[
               'inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200',
               showAuthor ? 'translate-x-[22px]' : 'translate-x-0.5',
+            ].join(' ')}
+          />
+        </button>
+      </div>
+
+      {/* Italic Author toggle */}
+      {showAuthor && (
+        <div className="mb-4 flex items-center justify-between rounded-xl border px-3.5 py-3 shadow-inner controls-row-wrapper animate-fadeIn">
+          <div className="flex flex-col">
+            <span className="text-xs font-bold">
+              {t.controlPanel.italicAuthor}
+            </span>
+            <span className="text-[10px] mt-0.5 sub-desc">
+              {t.controlPanel.italicAuthorDesc}
+            </span>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={italicAuthor}
+            onClick={() => onItalicAuthorChange(!italicAuthor)}
+            style={{ backgroundColor: italicAuthor ? 'var(--accent-color)' : undefined }}
+            className={[
+              'relative inline-flex h-6 w-11 flex-none cursor-pointer items-center rounded-full transition-colors duration-200',
+              italicAuthor ? '' : 'bg-neutral-700',
+            ].join(' ')}
+          >
+            <span
+              className={[
+                'inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200',
+                italicAuthor ? 'translate-x-[22px]' : 'translate-x-0.5',
+              ].join(' ')}
+            />
+          </button>
+        </div>
+      )}
+
+      {/* Color contrast toggle */}
+      <div className="mb-4 flex items-center justify-between rounded-xl border px-3.5 py-3 shadow-inner controls-row-wrapper animate-fadeIn">
+        <div className="flex flex-col">
+          <span className="text-xs font-bold">
+            {t.controlPanel.colorContrast}
+          </span>
+          <span className="text-[10px] mt-0.5 sub-desc">
+            {t.controlPanel.colorContrastDesc}
+          </span>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={colorContrast}
+          onClick={() => onColorContrastChange(!colorContrast)}
+          style={{ backgroundColor: colorContrast ? 'var(--accent-color)' : undefined }}
+          className={[
+            'relative inline-flex h-6 w-11 flex-none cursor-pointer items-center rounded-full transition-colors duration-200',
+            colorContrast ? '' : 'bg-neutral-700',
+          ].join(' ')}
+        >
+          <span
+            className={[
+              'inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200',
+              colorContrast ? 'translate-x-[22px]' : 'translate-x-0.5',
             ].join(' ')}
           />
         </button>

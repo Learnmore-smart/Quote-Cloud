@@ -20,7 +20,7 @@ interface PaperCanvasProps {
   customFont: string;
   composingText: string;
   signatureText: string;
-  maskType: 'none' | 'dark' | 'light' | 'gradient-dark' | 'gradient-light' | 'vignette';
+  maskType: 'none' | 'dark' | 'light' | 'gradient-dark' | 'gradient-light' | 'vignette' | 'vignette-light';
   maskOpacity: number;
   showPreviewOverlay: boolean;
   orientation: Orientation;
@@ -28,6 +28,8 @@ interface PaperCanvasProps {
   showGrid: boolean;
   userThemes?: any[];
   fontOverride?: string | null;
+  colorContrast?: boolean;
+  italicAuthor?: boolean;
 }
 
 /* =============================================================================
@@ -60,6 +62,8 @@ export function PaperCanvas({
   showGrid,
   userThemes = [],
   fontOverride = null,
+  colorContrast = true,
+  italicAuthor = true,
 }: PaperCanvasProps) {
   // Tile the flat quote list into the rigid full-bleed mosaic.
   const rows = useMemo(() => packRows(items), [items]);
@@ -273,6 +277,8 @@ export function PaperCanvas({
                         loading={loading}
                         theme={theme}
                         fontFamily={activeFontFamily}
+                        colorContrast={colorContrast}
+                        italicAuthor={italicAuthor}
                       />
                     );
                   })}

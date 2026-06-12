@@ -49,8 +49,14 @@ const STORAGE_KEY = 'quote-cloud-data';
 /** localStorage key for the persisted "show author" toggle. */
 const SHOW_AUTHOR_KEY = 'quote-cloud-show-author';
 
+/** localStorage key for the persisted "italic author" toggle. */
+const ITALIC_AUTHOR_KEY = 'quote-cloud-italic-author';
+
 /** localStorage key for the persisted "show grid" toggle. */
 const SHOW_GRID_KEY = 'quote-cloud-show-grid';
+
+/** localStorage key for the persisted "color contrast" toggle. */
+const COLOR_CONTRAST_KEY = 'quote-cloud-color-contrast';
 
 /** localStorage key for the cached language. */
 const LANGUAGE_KEY = 'quote-cloud-lang';
@@ -126,6 +132,16 @@ function loadShowAuthor(): boolean {
   }
 }
 
+/** Load the saved "italic author" toggle from localStorage (defaults to true). */
+function loadItalicAuthor(): boolean {
+  if (typeof localStorage === 'undefined') return true;
+  try {
+    return localStorage.getItem(ITALIC_AUTHOR_KEY) !== 'false';
+  } catch {
+    return true;
+  }
+}
+
 /** Load the saved custom theme name from localStorage. */
 function loadCustomThemeName(): string {
   if (typeof localStorage === 'undefined') return '';
@@ -146,7 +162,18 @@ function loadShowGrid(): boolean {
   }
 }
 
-function loadMaskType(): 'none' | 'dark' | 'light' | 'gradient-dark' | 'gradient-light' | 'vignette' {
+/** Load the saved "color contrast" toggle from localStorage (defaults to true). */
+function loadColorContrast(): boolean {
+  if (typeof localStorage === 'undefined') return true;
+  try {
+    return localStorage.getItem(COLOR_CONTRAST_KEY) !== 'false';
+  } catch {
+    return true;
+  }
+}
+
+
+function loadMaskType(): 'none' | 'dark' | 'light' | 'gradient-dark' | 'gradient-light' | 'vignette' | 'vignette-light' {
   if (typeof localStorage === 'undefined') return 'none';
   try {
     const cached = localStorage.getItem('quote-cloud-mask-type');
@@ -156,7 +183,8 @@ function loadMaskType(): 'none' | 'dark' | 'light' | 'gradient-dark' | 'gradient
       cached === 'light' ||
       cached === 'gradient-dark' ||
       cached === 'gradient-light' ||
-      cached === 'vignette'
+      cached === 'vignette' ||
+      cached === 'vignette-light'
     ) {
       return cached as any;
     }
@@ -252,7 +280,9 @@ export default function App() {
   const [paper, setPaper] = useState<PaperKey>('A4');
   const [orientation, setOrientation] = useState<Orientation>('portrait');
   const [showAuthor, setShowAuthor] = useState(() => loadShowAuthor());
+  const [italicAuthor, setItalicAuthor] = useState(() => loadItalicAuthor());
   const [showGrid, setShowGrid] = useState(() => loadShowGrid());
+  const [colorContrast, setColorContrast] = useState(() => loadColorContrast());
   const [customThemeName, setCustomThemeName] = useState<string>(() => loadCustomThemeName());
   const [lang, setLang] = useState<'en' | 'zh'>(() => loadLanguage());
   const [theme, setTheme] = useState<PosterTheme>(() => loadTheme());
@@ -264,7 +294,7 @@ export default function App() {
   const [userThemes, setUserThemes] = useState<UserTheme[]>(() => loadUserThemes());
   const [themeModalOpen, setThemeModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
-  const [maskType, setMaskType] = useState<'none' | 'dark' | 'light' | 'gradient-dark' | 'gradient-light' | 'vignette'>(() => loadMaskType());
+  const [maskType, setMaskType] = useState<'none' | 'dark' | 'light' | 'gradient-dark' | 'gradient-light' | 'vignette' | 'vignette-light'>(() => loadMaskType());
   const [maskOpacity, setMaskOpacity] = useState<number>(() => loadMaskOpacity());
   const [showPreviewOverlay, setShowPreviewOverlay] = useState<boolean>(() => loadShowPreviewOverlay());
 
@@ -351,12 +381,26 @@ export default function App() {
     }
   }, [showAuthor]);
 
+  // Persist the "italic author" toggle so it survives a page refresh.
+  useEffect(() => {
+    try {
+      localStorage.setItem(ITALIC_AUTHOR_KEY, String(italicAuthor));
+    } catch {}
+  }, [italicAuthor]);
+
   // Persist the "show grid" toggle so it survives a page refresh.
   useEffect(() => {
     try {
       localStorage.setItem(SHOW_GRID_KEY, String(showGrid));
     } catch {}
   }, [showGrid]);
+
+  // Persist the "color contrast" toggle so it survives a page refresh.
+  useEffect(() => {
+    try {
+      localStorage.setItem(COLOR_CONTRAST_KEY, String(colorContrast));
+    } catch {}
+  }, [colorContrast]);
 
   // Persist language key to localStorage
   useEffect(() => {
@@ -489,6 +533,11 @@ export default function App() {
     setQuotes((prev) => prev.map((q, i) => i === index ? updatedQuote : q));
   }, []);
 
+  // Clear all quotes in the deck.
+  const handleClearAllQuotes = useCallback(() => {
+    setQuotes([]);
+  }, []);
+
   // Inject print rule on paper/orientation change
   useEffect(() => {
     injectPrintRule(paper, orientation);
@@ -609,7 +658,7 @@ export default function App() {
           </div>
           <div className="logo">
             {lang === 'zh' ? '语录云图' : 'QUOTE CLOUD'}
-            <span className="logo-sub">v2.0</span>
+            <span className="logo-sub">v2.1</span>
           </div>
         </div>
       </header>
@@ -635,6 +684,8 @@ export default function App() {
           showGrid={showGrid}
           userThemes={userThemes}
           fontOverride={fontOverride}
+          colorContrast={colorContrast}
+          italicAuthor={italicAuthor}
         />
       </main>
 
@@ -642,10 +693,14 @@ export default function App() {
         paper={paper}
         orientation={orientation}
         showAuthor={showAuthor}
+        colorContrast={colorContrast}
+        italicAuthor={italicAuthor}
         theme={theme}
         onPaperChange={setPaper}
         onOrientationChange={setOrientation}
         onShowAuthorChange={setShowAuthor}
+        onColorContrastChange={setColorContrast}
+        onItalicAuthorChange={setItalicAuthor}
         onManageQuotes={() => setManageOpen(true)}
         onOpenThemeModal={() => setThemeModalOpen(true)}
         onOpenExportModal={() => setExportModalOpen(true)}
@@ -668,6 +723,7 @@ export default function App() {
         onAdd={handleAddQuote}
         onDelete={handleDeleteQuote}
         onUpdate={handleUpdateQuote}
+        onClearAll={handleClearAllQuotes}
         onFeelLucky={handleFeelLucky}
         onLoadPreset={handleLoadPreset}
         t={t}
@@ -696,6 +752,8 @@ export default function App() {
         onAddUserTheme={handleAddUserTheme}
         onDeleteUserTheme={handleDeleteUserTheme}
         previewItems={items}
+        colorContrast={colorContrast}
+        italicAuthor={italicAuthor}
       />
 
       <ExportModal
