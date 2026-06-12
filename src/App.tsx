@@ -658,7 +658,7 @@ export default function App() {
           </div>
           <div className="logo">
             {lang === 'zh' ? '语录云图' : 'QUOTE CLOUD'}
-            <span className="logo-sub">v2.2</span>
+            <span className="logo-sub">v2.1</span>
           </div>
         </div>
       </header>

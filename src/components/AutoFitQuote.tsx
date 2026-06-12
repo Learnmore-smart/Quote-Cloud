@@ -52,14 +52,8 @@ export function AutoFitQuote({ item, flex, showAuthor, loading, theme, fontFamil
     const fit = () => {
       if (cancelled) return;
       
-      const style = window.getComputedStyle(cell);
-      const paddingLeft = parseFloat(style.paddingLeft || '0');
-      const paddingRight = parseFloat(style.paddingRight || '0');
-      const paddingTop = parseFloat(style.paddingTop || '0');
-      const paddingBottom = parseFloat(style.paddingBottom || '0');
-
-      const maxW = Math.max(0, cell.clientWidth - paddingLeft - paddingRight);
-      const maxH = Math.max(0, cell.clientHeight - paddingTop - paddingBottom);
+      const maxH = cell.clientHeight;
+      const maxW = cell.clientWidth;
       if (maxH <= 0 || maxW <= 0) return;
 
       /** Apply a candidate size and force a synchronous reflow + measure. */
@@ -145,10 +139,7 @@ export function AutoFitQuote({ item, flex, showAuthor, loading, theme, fontFamil
         {showAuthor && quote.author && (
           <span
             className="author-name opacity-80 whitespace-nowrap"
-            style={{ 
-              fontStyle: italicAuthor ? 'italic' : 'normal',
-              paddingRight: italicAuthor ? '0.25em' : '0.1em'
-            }}
+            style={{ fontStyle: italicAuthor ? 'italic' : 'normal' }}
           >
             {' '}— {quote.author}
           </span>

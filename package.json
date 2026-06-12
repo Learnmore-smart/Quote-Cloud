@@ -1,7 +1,7 @@
 {
   "name": "quote-cloud",
   "private": true,
-  "version": "2.2.0",
+  "version": "2.1.0",
   "type": "module",
   "description": "AI 排版海报生成器 (Quote Cloud · AI Layout Studio)",
   "scripts": {
